@@ -6,6 +6,7 @@ import { useAct } from '../hooks/useAct';
 import { useBgm } from '../hooks/useSound';
 import { formatCode } from '../lib/code';
 import SoundControls from './SoundControls';
+import HomeButton from './HomeButton';
 import { CardBack } from './CardView';
 
 const TURN_OPTIONS: { label: string; value: Settings['turnSeconds'] }[] = [
@@ -62,7 +63,8 @@ export default function Lobby({ room, players, me, isHost }: ScreenProps) {
         <h1 className="font-display text-2xl font-extrabold tracking-tight">
           ラッキー<span className="text-gold">7</span>
         </h1>
-        <SoundControls className="ml-auto" />
+        <HomeButton className="ml-auto" />
+        <SoundControls />
       </header>
 
       <section className="felt flex items-center gap-4 rounded-3xl p-4">

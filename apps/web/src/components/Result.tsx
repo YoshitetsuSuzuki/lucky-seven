@@ -7,6 +7,7 @@ import { useBgm, useTableBgm } from '../hooks/useSound';
 import { playSfx } from '../lib/audio';
 import { STALE_MS } from '../lib/stale';
 import SoundControls from './SoundControls';
+import HomeButton from './HomeButton';
 
 export default function Result({
   room,
@@ -41,7 +42,8 @@ export default function Result({
 
   return (
     <div className="mx-auto flex min-h-full max-w-lg flex-col gap-6 p-5">
-      <header className="flex items-center justify-end">
+      <header className="flex items-center justify-end gap-1.5">
+        <HomeButton />
         <SoundControls scope="table" />
       </header>
 

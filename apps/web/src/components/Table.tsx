@@ -15,6 +15,7 @@ import TargetModal from './TargetModal';
 import RoundEndOverlay from './RoundEndOverlay';
 import ReactionBar from './ReactionBar';
 import SoundControls from './SoundControls';
+import HomeButton from './HomeButton';
 import TablePanel from './TablePanel';
 import FlyingCards from './FlyingCards';
 
@@ -96,7 +97,8 @@ export default function Table({
             {waiting ? (waiting.seat === mySeat ? 'あなたの番' : `${nameOf(waiting.seat)} の番`) : ''}
           </span>
           <Timer deadline={state.deadline} total={state.settings.turnSeconds} />
-          <SoundControls scope="table" className="ml-auto" />
+          <HomeButton inGame={room.status === 'playing'} className="ml-auto" />
+          <SoundControls scope="table" />
         </header>
 
         <TablePanel
