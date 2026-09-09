@@ -8,6 +8,7 @@ import { playSfx } from '../lib/audio';
 import { STALE_MS } from '../lib/stale';
 import SoundControls from './SoundControls';
 import HomeButton from './HomeButton';
+import { useNavigate } from 'react-router-dom';
 
 export default function Result({
   room,
@@ -19,6 +20,7 @@ export default function Result({
   /** 卓（最終手札）に戻る。undefined なら戻り先がない */
   onBackToTable?: () => void;
 }) {
+  const nav = useNavigate();
   const { busy, error, run } = useAct(room.code);
   const nameOf = useNameOf(players);
   const elapsed = useElapsed(room.updated_at);
@@ -51,7 +53,7 @@ export default function Result({
         <p className="font-display text-[11px] font-extrabold tracking-[0.4em] text-gold/60">GAME OVER</p>
         <h1 className="mt-1 font-display text-4xl font-extrabold tracking-tight">
           {iWon ? (
-            <span className="text-gold [text-shadow:0_0_28px_rgba(242,193,78,.55)]">勝利</span>
+            <span className="text-gold [text-shadow:0_0_28px_var(--glow)]">勝利</span>
           ) : (
             <span>ゲーム終了</span>
           )}
@@ -66,11 +68,11 @@ export default function Result({
             <li
               key={p.seat}
               className={`animate-riseIn flex items-center gap-3 rounded-2xl px-4 py-3.5 ${
-                won ? 'gold-foil text-[#3a2a06] shadow-[0_14px_34px_-16px_rgba(242,193,78,.9)]' : 'lacquer'
+                won ? 'gold-foil shadow-[0_14px_34px_-16px_var(--glow)]' : 'lacquer'
               }`}
               style={{ animationDelay: `${i * 55}ms` }}
             >
-              <span className={`w-6 font-display text-lg font-extrabold ${won ? 'text-[#3a2a06]' : 'text-cream/35'}`}>{i + 1}</span>
+              <span className={`w-6 font-display text-lg font-extrabold ${won ? '' : 'text-cream/35'}`}>{i + 1}</span>
               <span className="min-w-0 flex-1 truncate font-bold">{nameOf(p.seat)}</span>
               <span className="font-display text-xl font-extrabold">{p.totalScore}</span>
             </li>
@@ -83,7 +85,7 @@ export default function Result({
           <button
             disabled={busy}
             onClick={() => void run('next_game')}
-            className="gold-foil w-full rounded-2xl py-4 font-display text-lg font-extrabold text-[#3a2a06] transition active:scale-[.98] disabled:opacity-40"
+            className="gold-foil w-full rounded-2xl py-4 font-display text-lg font-extrabold transition active:scale-[.98] disabled:opacity-40"
           >
             もう一回（同じメンバー）
           </button>
@@ -96,11 +98,18 @@ export default function Result({
         {onBackToTable && (
           <button
             onClick={onBackToTable}
-            className="w-full rounded-2xl border border-white/12 bg-ink3 py-3.5 font-bold text-cream/85 transition active:scale-[.98]"
+            className="w-full rounded-2xl border border-edge/12 bg-ink3 py-3.5 font-bold text-cream/85 transition active:scale-[.98]"
           >
             卓に戻る（最終手札を見る）
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => nav('/')}
+          className="w-full rounded-2xl border border-edge/12 bg-ink3 py-3.5 font-bold text-cream/85 transition active:scale-[.98]"
+        >
+          ホームへ戻る
+        </button>
         {error && <p className="mt-2 text-center text-sm text-rose">{error}</p>}
       </div>
     </div>

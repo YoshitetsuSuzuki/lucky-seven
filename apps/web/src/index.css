@@ -486,6 +486,29 @@ body,
   height: 100%;
 }
 
+/* ネイティブ（Capacitor）ではステータスバーの下に潜り込むので、
+   アプリ全体を安全領域のぶんだけ下げる。ブラウザでは 0 なので何も起きない。 */
+#root {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* 画面上端の帯。スクロールした中身がステータスバーに透けないよう、
+   body と同じ背景を「同じ位置で」敷いて隠す。 */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top);
+  z-index: 55;
+  pointer-events: none;
+  background-color: rgb(var(--ink-rgb));
+  background-image: var(--page-bg);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
 /* `sticky top-0` の要素は、安全領域のぶんだけ下で止める */
 .sticky-safe {
   top: env(safe-area-inset-top);

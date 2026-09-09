@@ -2,6 +2,15 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary';
+
+// 書体は同梱する（実行時に外部サーバーへ取りに行かない）。
+// どちらも SIL Open Font License 1.1。
+import '@fontsource/bricolage-grotesque/500.css';
+import '@fontsource/bricolage-grotesque/800.css';
+import '@fontsource/zen-kaku-gothic-new/400.css';
+import '@fontsource/zen-kaku-gothic-new/700.css';
+import '@fontsource/zen-kaku-gothic-new/900.css';
+
 import './index.css';
 
 const root = document.getElementById('root')!;
