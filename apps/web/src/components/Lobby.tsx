@@ -21,11 +21,11 @@ const ROUND_TARGETS = [3, 5, 10];
 
 /** 招待の小ボタン（コピー・共有） */
 const INVITE_BTN =
-  'flex min-h-[34px] items-center rounded-full border border-white/15 bg-black/25 px-3 text-xs font-bold leading-none text-cream/80 transition active:scale-95';
+  'flex min-h-[34px] items-center rounded-full border border-feltink/25 bg-feltchip/20 px-3 text-xs font-bold leading-none text-feltink/90 transition active:scale-95';
 
 /** ヘッダーの小さな丸ボタン（遊び方・情報） */
 const ICON_BTN =
-  'flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[15px] font-bold leading-none text-muted transition active:scale-95';
+  'flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded-full border border-edge/10 bg-edge/5 text-[15px] font-bold leading-none text-muted transition active:scale-95';
 
 function Chip({ active, disabled, onClick, children }: { active: boolean; disabled: boolean; onClick: () => void; children: ReactNode }) {
   return (
@@ -33,7 +33,7 @@ function Chip({ active, disabled, onClick, children }: { active: boolean; disabl
       disabled={disabled}
       onClick={onClick}
       className={`rounded-full px-4 py-2.5 text-sm font-bold transition active:scale-95 ${
-        active ? 'gold-foil text-[#3a2a06] shadow-[0_8px_20px_-10px_rgba(242,193,78,.9)]' : 'border border-white/10 bg-ink3 text-cream/65'
+        active ? 'gold-foil shadow-[0_8px_20px_-10px_var(--glow)]' : 'border border-edge/10 bg-ink3 text-cream/65'
       } disabled:cursor-default disabled:opacity-40`}
     >
       {children}
@@ -84,7 +84,7 @@ export default function Lobby({ room, players, me, isHost }: ScreenProps) {
     <div className="mx-auto flex min-h-full max-w-lg flex-col gap-6 p-5">
       <header className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5">
         <h1 className="mr-auto font-display text-2xl font-extrabold tracking-tight">
-          ラッキー<span className="text-gold">7</span>
+          ラッキー<span className="text-seven">7</span>
         </h1>
         <Link to="/help" aria-label="遊び方" className={ICON_BTN}>
           <span aria-hidden>？</span>
@@ -102,8 +102,8 @@ export default function Lobby({ room, players, me, isHost }: ScreenProps) {
           <CardBack size="md" className="absolute inset-0" style={{ transform: 'rotate(4deg)' }} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="font-display text-[10px] font-extrabold tracking-[0.3em] text-cream/45">ルームコード</div>
-          <div className="font-display text-[32px] font-extrabold leading-tight tracking-[0.12em] text-gold [text-shadow:0_2px_16px_rgba(242,193,78,.35)]">
+          <div className="font-display text-[10px] font-extrabold tracking-[0.3em] text-feltink/60">ルームコード</div>
+          <div className="font-display text-[32px] font-extrabold leading-tight tracking-[0.12em] text-feltgold [text-shadow:0_2px_16px_rgba(0,0,0,.35)]">
             {formatCode(room.code)}
           </div>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -133,7 +133,7 @@ export default function Lobby({ room, players, me, isHost }: ScreenProps) {
                 {p.id === me.id && <span className="ml-2 text-[11px] text-cream/40">あなた</span>}
                 {p.seat === null && <span className="ml-2 text-[11px] text-cream/30">観戦</span>}
               </span>
-              {p.is_cpu && <span className="rounded-full bg-white/6 px-2 py-0.5 text-[10px] font-bold text-cream/55 ring-1 ring-white/10">CPU</span>}
+              {p.is_cpu && <span className="rounded-full bg-edge/[0.06] px-2 py-0.5 text-[10px] font-bold text-cream/55 ring-1 ring-edge/10">CPU</span>}
               {p.is_cpu && isHost && (
                 <button disabled={busy} onClick={() => void run('remove_cpu', { playerId: p.id })} className="px-2 py-2 text-sm text-muted">
                   削除
@@ -146,7 +146,7 @@ export default function Lobby({ room, players, me, isHost }: ScreenProps) {
           <button
             disabled={busy || seated.length >= 12}
             onClick={() => void run('add_cpu')}
-            className="mt-3 w-full rounded-2xl border border-dashed border-white/15 py-2.5 text-sm text-cream/60 disabled:opacity-40"
+            className="mt-3 w-full rounded-2xl border border-dashed border-edge/15 py-2.5 text-sm text-cream/60 disabled:opacity-40"
           >
             ＋ CPU を追加
           </button>
@@ -190,7 +190,7 @@ export default function Lobby({ room, players, me, isHost }: ScreenProps) {
           <button
             disabled={busy || seated.length < 2}
             onClick={() => void run('start')}
-            className="gold-foil w-full rounded-2xl py-4 font-display text-lg font-extrabold text-[#3a2a06] shadow-[0_14px_36px_-14px_rgba(242,193,78,.85)] transition active:scale-[.98] disabled:opacity-40"
+            className="gold-foil w-full rounded-2xl py-4 font-display text-lg font-extrabold shadow-[0_14px_36px_-14px_var(--glow)] transition active:scale-[.98] disabled:opacity-40"
           >
             ゲーム開始（{seated.length}人）
           </button>

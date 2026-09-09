@@ -71,10 +71,10 @@ export function HelpContent() {
 
       <Section title="手番でできること" lead="「引く」か「降りる」の2択。">
         <div aria-hidden className="flex gap-2.5 py-0.5">
-          <div className="gold-foil flex-1 rounded-2xl py-3.5 text-center font-display text-[19px] font-extrabold tracking-wide text-[#3a2a06] shadow-[0_10px_30px_-12px_rgba(242,193,78,.8)]">
+          <div className="gold-foil flex-1 rounded-2xl py-3.5 text-center font-display text-[19px] font-extrabold tracking-wide shadow-[0_10px_30px_-12px_var(--glow)]">
             引く
           </div>
-          <div className="flex-1 rounded-2xl border border-white/12 bg-ink3 py-3.5 text-center font-display text-[19px] font-extrabold tracking-wide text-cream/85">
+          <div className="flex-1 rounded-2xl border border-edge/12 bg-ink3 py-3.5 text-center font-display text-[19px] font-extrabold tracking-wide text-cream/85">
             降りる
           </div>
         </div>
@@ -148,7 +148,7 @@ export function HelpContent() {
           {[0, 2, 3, 5, 7, 9, 11].map((v) => (
             <CardView key={v} card={num(v)} size="sm" />
           ))}
-          <span className="ml-1.5 font-display text-xl font-extrabold text-gold [text-shadow:0_0_20px_rgba(242,193,78,.5)]">+15</span>
+          <span className="ml-1.5 font-display text-xl font-extrabold text-gold [text-shadow:0_0_20px_var(--glow)]">+15</span>
         </Row>
         <p>
           場の数字カードが7種類（0も1種類として数えます）そろった瞬間に +15点。その時点で<b className="text-cream/95">全員のラウンドが終了</b>し、まだ現役だった人はその場札のまま得点が確定します。
@@ -285,7 +285,7 @@ export default function HelpSheet({ onClose }: { onClose: () => void }) {
     >
       <div className="mx-auto max-w-lg">
         <header
-          className="sticky top-0 z-10 flex items-center gap-3 border-b border-white/8 bg-ink/95 px-4 pb-3 backdrop-blur"
+          className="sticky top-0 z-10 flex items-center gap-3 border-b border-edge/8 bg-ink/95 px-4 pb-3 backdrop-blur"
           style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}
         >
           <h1 className="font-display text-xl font-extrabold tracking-tight">
@@ -294,7 +294,7 @@ export default function HelpSheet({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="ml-auto flex min-h-[40px] shrink-0 items-center rounded-full border border-white/12 bg-white/5 px-4 text-[13px] font-bold leading-none text-cream/85 transition active:scale-95"
+            className="ml-auto flex min-h-[40px] shrink-0 items-center rounded-full border border-edge/12 bg-edge/5 px-4 text-[13px] font-bold leading-none text-cream/85 transition active:scale-95"
           >
             閉じる
           </button>

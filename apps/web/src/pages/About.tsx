@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import SoundControls from '../components/SoundControls';
 import { CardBack } from '../components/CardView';
+import { ThemeCards } from '../components/ThemePicker';
+import { useTheme } from '../lib/theme';
 import { useGoBack } from '../hooks/useGoBack';
 import { legalUrl, SUPPORT_EMAIL } from '../lib/links';
 import { APP_NAME, APP_VERSION } from '../version';
@@ -45,7 +47,7 @@ function ExternalLink({ href, children }: { href: string; children: ReactNode })
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex min-h-[48px] items-center justify-between gap-3 rounded-2xl border border-white/10 bg-ink3/70 px-4 text-[14px] font-bold text-cream/85 transition active:scale-[.99]"
+      className="flex min-h-[48px] items-center justify-between gap-3 rounded-2xl border border-edge/10 bg-ink3/70 px-4 text-[14px] font-bold text-cream/85 transition active:scale-[.99]"
     >
       {children}
       <span aria-hidden className="text-cream/35">
@@ -57,6 +59,7 @@ function ExternalLink({ href, children }: { href: string; children: ReactNode })
 
 export default function About() {
   const back = useGoBack();
+  const theme = useTheme();
   const [cleared, setCleared] = useState<number | null>(null);
 
   const onClear = () => {
@@ -69,17 +72,14 @@ export default function About() {
 
   return (
     <div className="mx-auto max-w-lg px-4" style={{ paddingBottom: 'calc(3rem + env(safe-area-inset-bottom))' }}>
-      <header
-        className="sticky top-0 z-10 flex items-center gap-3 border-b border-white/8 bg-ink/95 px-0.5 pb-3 backdrop-blur"
-        style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}
-      >
+      <header className="sticky-safe sticky z-10 flex items-center gap-3 border-b border-edge/8 bg-ink/95 px-0.5 pb-3 pt-3 backdrop-blur">
         <h1 className="font-display text-xl font-extrabold tracking-tight">
           設定・情報<span className="ml-2 text-[11px] font-extrabold tracking-[0.3em] text-gold/60">ABOUT</span>
         </h1>
         <button
           type="button"
           onClick={back}
-          className="ml-auto flex min-h-[40px] shrink-0 items-center rounded-full border border-white/12 bg-white/5 px-4 text-[13px] font-bold leading-none text-cream/85 transition active:scale-95"
+          className="ml-auto flex min-h-[40px] shrink-0 items-center rounded-full border border-edge/12 bg-edge/5 px-4 text-[13px] font-bold leading-none text-cream/85 transition active:scale-95"
         >
           戻る
         </button>
@@ -92,15 +92,22 @@ export default function About() {
             <CardBack size="md" className="absolute inset-0" style={{ transform: 'rotate(4deg)' }} />
           </div>
           <div className="min-w-0">
-            <p className="font-display text-[10px] font-extrabold tracking-[0.4em] text-gold/60">MIDNIGHT CARD SALON</p>
-            <h2 className="font-display text-[30px] font-extrabold leading-tight tracking-tight">
-              ラッキー<span className="text-gold">7</span>
+            <p className="font-display text-[10px] font-extrabold tracking-[0.4em] text-feltgold/80">{theme.eyebrow}</p>
+            <h2 className="font-display text-[30px] font-extrabold leading-tight tracking-tight text-feltink">
+              ラッキー<span className="text-feltgold">7</span>
             </h2>
-            <p className="mt-0.5 text-[12px] text-cream/55">
+            <p className="mt-0.5 text-[12px] text-feltink/70">
               {APP_NAME} バージョン {APP_VERSION}
             </p>
           </div>
         </section>
+
+        <Section title="見た目のテーマ">
+          <p className="text-[13px]">
+            卓の色・カード・空気ごと切り替わります。選ぶとすぐに反映され、この端末に覚えておきます。
+          </p>
+          <ThemeCards />
+        </Section>
 
         <Section title="音の設定">
           <div className="flex items-start gap-3">
@@ -111,7 +118,7 @@ export default function About() {
               待っている間の BGM と、カードをめくる音・バースト音などの効果音の切り替えです。
             </p>
           </div>
-          <div className="flex items-start gap-3 border-t border-white/8 pt-2.5">
+          <div className="flex items-start gap-3 border-t border-edge/8 pt-2.5">
             <SoundControls scope="table" className="pt-0.5" />
             <p className="min-w-0 flex-1 text-[13px]">
               <b className="text-cream/95">対局中（卓・結果）用</b>
@@ -171,7 +178,7 @@ export default function About() {
             書体: Bricolage Grotesque（SIL Open Font License 1.1） / Zen Kaku Gothic New（SIL Open Font License 1.1）
           </p>
           <p>通信・データベース: Supabase</p>
-          <p className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-[12.5px] text-cream/70">
+          <p className="rounded-2xl border border-edge/10 bg-edge/5 px-3 py-2 text-[12.5px] text-cream/70">
             このゲームはオリジナル作品です。他社のカードゲーム製品とは関係ありません。
           </p>
           <p className="text-[12.5px] text-cream/55">開発: 鈴木 佳哲（個人開発者）</p>

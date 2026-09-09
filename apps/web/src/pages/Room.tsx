@@ -95,8 +95,8 @@ export default function Room() {
   const notice = reconnectError && (
     <div className="flex flex-wrap items-center justify-center gap-3 px-3 py-1.5 text-sm">
       <span className="text-rose">再接続できません：{reconnectError}</span>
-      <button onClick={recheck} className="rounded-full border border-white/10 bg-ink3 px-3 py-2 text-cream/85">再試行</button>
-      <button onClick={rejoin} className="rounded-full border border-white/10 bg-ink3 px-3 py-2 text-cream/85">参加し直す</button>
+      <button onClick={recheck} className="rounded-full border border-edge/10 bg-ink3 px-3 py-2 text-cream/85">再試行</button>
+      <button onClick={rejoin} className="rounded-full border border-edge/10 bg-ink3 px-3 py-2 text-cream/85">参加し直す</button>
     </div>
   );
 

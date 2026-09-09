@@ -17,10 +17,10 @@ function avatarColor(name: string): string {
 function Chip({ tone, children }: { tone: 'gold' | 'green' | 'rose' | 'blue' | 'dim'; children: ReactNode }) {
   const cls = {
     gold: 'bg-gold/15 text-gold ring-gold/35',
-    green: 'bg-emerald-400/15 text-emerald-300 ring-emerald-400/30',
+    green: 'bg-mint/15 text-mint ring-mint/30',
     rose: 'bg-rose/20 text-rose ring-rose/40',
     blue: 'bg-frost/15 text-frost ring-frost/30',
-    dim: 'bg-white/5 text-cream/40 ring-white/10',
+    dim: 'bg-edge/5 text-cream/40 ring-edge/10',
   }[tone];
   return <span className={`rounded-full px-1.5 py-[1px] text-[10px] font-bold leading-4 ring-1 ${cls}`}>{children}</span>;
 }
@@ -31,12 +31,12 @@ function SevenBurst() {
       {Array.from({ length: 12 }, (_, i) => (
         <span
           key={i}
-          className="animate-sparkOut absolute left-1/2 top-1/2 block h-1.5 w-1.5 rounded-full bg-gold"
+          className="animate-sparkOut absolute left-1/2 top-1/2 block h-1.5 w-1.5 rounded-full bg-seven"
           style={
             {
               '--a': `${i * 30}deg`,
               animationDelay: `${i * 28}ms`,
-              boxShadow: '0 0 8px rgba(242,193,78,.9)',
+              boxShadow: '0 0 8px var(--seven-glow)',
             } as CSSProperties
           }
         />
@@ -77,7 +77,7 @@ export default function PlayerRow({
   return (
     <div
       className={`relative overflow-hidden rounded-2xl p-2.5 transition-colors duration-300 ${
-        lit ? 'lamp-lit' : stayed ? 'border border-frost/15 bg-[#141d33]' : 'lacquer'
+        lit ? 'lamp-lit' : stayed ? 'stayed-row border border-frost/25' : 'lacquer'
       } ${busted ? 'opacity-70 grayscale-[.35]' : ''} ${effect === 'bust' ? 'animate-shake' : ''} ${
         effect === 'triple' ? 'animate-orangePulse' : ''
       }`}
@@ -86,19 +86,14 @@ export default function PlayerRow({
       {effect === 'freeze' && (
         <div
           key={`z${effectKey}`}
-          className="animate-frostIn pointer-events-none absolute inset-0"
-          style={{
-            background:
-              'linear-gradient(158deg, rgba(190,235,250,.42), rgba(120,190,225,.18) 45%, rgba(255,255,255,.3))',
-            boxShadow: 'inset 0 0 0 2px rgba(143,216,238,.75)',
-          }}
+          className="frost-wash animate-frostIn pointer-events-none absolute inset-0"
         />
       )}
       {effect === 'seven' && <SevenBurst key={`s${effectKey}`} />}
 
       <div className="relative flex items-center gap-2">
         <span
-          className="grid h-7 w-7 shrink-0 place-items-center rounded-full font-display text-[13px] font-extrabold text-white/95 ring-1 ring-white/15"
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-full font-display text-[13px] font-extrabold text-white/95 ring-1 ring-edge/15"
           style={{ background: avatarColor(name) }}
           aria-hidden
         >
@@ -117,7 +112,7 @@ export default function PlayerRow({
           <b className="font-display text-[17px] font-extrabold text-cream/95">{score}</b>
           <span className="ml-1">今</span>
           <span className="mx-1 text-cream/20">/</span>
-          <b className="font-display text-[13px] font-extrabold text-gold/85">{player.totalScore}</b>
+          <b className="font-display text-[13px] font-extrabold text-gold">{player.totalScore}</b>
           <span className="ml-0.5">計</span>
         </span>
       </div>

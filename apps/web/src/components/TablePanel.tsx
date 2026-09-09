@@ -44,7 +44,7 @@ export default function TablePanel({
     <div className="felt flex items-end gap-2 rounded-2xl px-3 py-2.5">
       {/* 山札 */}
       <div className="flex shrink-0 flex-col items-center gap-1">
-        <span className="text-[10px] font-bold tracking-[0.18em] text-cream/45">山札</span>
+        <span className="text-[10px] font-bold tracking-[0.18em] text-feltink/60">山札</span>
         <div className="relative" style={{ width: 56, height: 78 }}>
           {STACK.map((o, i) => (
             <CardBack
@@ -57,7 +57,7 @@ export default function TablePanel({
           <div ref={deckRef} className="absolute inset-0">
             <CardBack size="md" />
           </div>
-          <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-full bg-ink/85 px-2 py-[1px] font-display text-[11px] font-extrabold text-gold ring-1 ring-gold/30">
+          <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-full bg-ink/90 px-2 py-[1px] font-display text-[11px] font-extrabold text-gold ring-1 ring-gold/30">
             {deckCount}
           </span>
         </div>
@@ -66,33 +66,33 @@ export default function TablePanel({
       {/* 実況 */}
       <div className="flex min-w-0 flex-1 flex-col items-center justify-center self-stretch px-1 pb-2 text-center">
         {notice ? (
-          <p className="animate-fadeUp text-[12px] font-bold leading-snug text-gold [text-shadow:0_1px_6px_rgba(0,0,0,.55)]">{notice}</p>
+          <p className="animate-fadeUp text-[12px] font-bold leading-snug text-feltgold [text-shadow:0_1px_6px_rgba(0,0,0,.4)]">{notice}</p>
         ) : shown.length > 0 ? (
           <div className="space-y-0.5">
             {shown.slice(0, 3).map((m, i) => (
               <p
                 key={`${version}-${i}`}
-                className="animate-fadeUp text-[12px] font-bold leading-snug text-cream/95 [text-shadow:0_1px_6px_rgba(0,0,0,.55)]"
+                className="animate-fadeUp text-[12px] font-bold leading-snug text-feltink [text-shadow:0_1px_6px_rgba(0,0,0,.4)]"
               >
                 {m}
               </p>
             ))}
           </div>
         ) : (
-          <p className="font-display text-[11px] tracking-[0.32em] text-cream/25">LUCKY SEVEN</p>
+          <p className="font-display text-[11px] tracking-[0.32em] text-feltink/35">LUCKY SEVEN</p>
         )}
       </div>
 
       {/* 捨て札 */}
       <div className="flex shrink-0 flex-col items-center gap-1">
-        <span className="text-[10px] font-bold tracking-[0.18em] text-cream/45">捨て札</span>
+        <span className="text-[10px] font-bold tracking-[0.18em] text-feltink/60">捨て札</span>
         <div ref={discardRef} className="relative" style={{ width: 56, height: 78 }}>
           {top ? (
             <CardView card={top} size="md" className="opacity-95" />
           ) : (
-            <div className="h-full w-full rounded-lg border border-dashed border-cream/20" />
+            <div className="h-full w-full rounded-lg border border-dashed border-feltink/25" />
           )}
-          <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-full bg-ink/85 px-2 py-[1px] font-display text-[11px] font-extrabold text-cream/70 ring-1 ring-white/10">
+          <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-full bg-ink/90 px-2 py-[1px] font-display text-[11px] font-extrabold text-cream/70 ring-1 ring-edge/10">
             {discard.length}
           </span>
         </div>

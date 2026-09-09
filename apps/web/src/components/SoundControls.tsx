@@ -37,7 +37,7 @@ export default function SoundControls({
         aria-pressed={bgm}
         onClick={toggleBgm}
         className={`flex min-h-[40px] items-center rounded-full border px-3 text-[13px] font-bold leading-none transition active:scale-95 ${
-          bgm ? 'border-gold/45 bg-gold/12 text-gold' : 'border-white/10 bg-white/5 text-muted'
+          bgm ? 'border-gold/45 bg-gold/12 text-gold' : 'border-edge/10 bg-edge/5 text-muted'
         }`}
       >
         ♪ BGM {bgm ? 'オン' : 'オフ'}
@@ -50,7 +50,7 @@ export default function SoundControls({
           setSfxOn(!sfx);
         }}
         className={`flex min-h-[40px] items-center rounded-full border px-2.5 text-[11px] font-bold leading-none transition active:scale-95 ${
-          sfx ? 'border-gold/30 bg-gold/8 text-cream/85' : 'border-white/10 bg-white/5 text-muted line-through'
+          sfx ? 'border-gold/30 bg-gold/8 text-cream/85' : 'border-edge/10 bg-edge/5 text-muted line-through'
         }`}
       >
         効果音

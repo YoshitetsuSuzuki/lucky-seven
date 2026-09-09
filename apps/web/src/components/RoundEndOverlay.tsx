@@ -39,7 +39,7 @@ export default function RoundEndOverlay({
     <button
       disabled={busy}
       onClick={onNext}
-      className="gold-foil w-full rounded-2xl py-3.5 font-display text-lg font-extrabold text-[#3a2a06] transition active:scale-[.98] disabled:opacity-40"
+      className="gold-foil w-full rounded-2xl py-3.5 font-display text-lg font-extrabold transition active:scale-[.98] disabled:opacity-40"
     >
       次のラウンドへ
     </button>
@@ -53,15 +53,15 @@ export default function RoundEndOverlay({
   return (
     <div className="fixed inset-x-0 bottom-0 z-40">
       {/* シートの上だけをうっすら暗くする帯（クリックは通さない＝下のカードは触れる） */}
-      <div className="pointer-events-none h-10 bg-gradient-to-t from-black/55 to-transparent" aria-hidden />
+      <div className="pointer-events-none h-10 bg-gradient-to-t from-scrim/55 to-transparent" aria-hidden />
       <div className="mx-auto max-w-lg px-2">
         <section
           role="region"
           aria-label={`ラウンド${state.round}の集計`}
-          className="animate-sheetUp flex flex-col rounded-t-3xl border border-b-0 border-white/10 bg-ink2/97 px-4 pt-3 shadow-[0_-20px_60px_-20px_rgba(0,0,0,.95)] backdrop-blur-md"
+          className="animate-sheetUp flex flex-col rounded-t-3xl border border-b-0 border-edge/10 bg-ink2/97 px-4 pt-3 shadow-[0_-20px_60px_-20px_rgba(0,0,0,.95)] backdrop-blur-md"
           style={{ maxHeight: '55vh', paddingBottom: 'calc(0.85rem + env(safe-area-inset-bottom))' }}
         >
-          <div className="mx-auto mb-2 h-1 w-10 shrink-0 rounded-full bg-white/15" aria-hidden />
+          <div className="mx-auto mb-2 h-1 w-10 shrink-0 rounded-full bg-edge/15" aria-hidden />
 
           <div className="flex shrink-0 items-center gap-2">
             <div className="min-w-0">
@@ -72,7 +72,7 @@ export default function RoundEndOverlay({
               type="button"
               onClick={onToggle}
               aria-expanded={open}
-              className="ml-auto shrink-0 rounded-full border border-white/12 bg-ink3 px-3 py-2 text-xs font-bold text-cream/75 transition active:scale-95"
+              className="ml-auto shrink-0 rounded-full border border-edge/12 bg-ink3 px-3 py-2 text-xs font-bold text-cream/75 transition active:scale-95"
             >
               {open ? '手札を見る ▾' : '集計を見る ▴'}
             </button>
@@ -88,7 +88,7 @@ export default function RoundEndOverlay({
               <table className="w-full text-sm">
                 <tbody>
                   {rows.map((p) => (
-                    <tr key={p.seat} className="border-t border-white/8">
+                    <tr key={p.seat} className="border-t border-edge/8">
                       <td className="py-2 pr-3 font-bold truncate max-w-[11rem]">{nameOf(p.seat)}</td>
                       <td className="whitespace-nowrap py-2 text-right text-muted">+{p.roundScore}</td>
                       <td className="py-2 pl-3 text-right font-display text-lg font-extrabold">{p.totalScore}</td>

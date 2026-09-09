@@ -29,6 +29,10 @@ let bgmBus: GainNode | null = null;
 let sfxBus: GainNode | null = null;
 let noiseBuf: AudioBuffer | null = null;
 
+/** playSfx(name, gain) で一時的に差し込む、音量を落としたバス */
+let softBus: GainNode | null = null;
+let sfxTarget: GainNode | null = null;
+
 let timer: number | null = null;
 let step = 0;
 let nextTime = 0;
@@ -170,7 +174,7 @@ function tone(
   opts: { type?: OscillatorType; peak?: number; to?: number; attack?: number; bus?: GainNode | null } = {},
 ) {
   if (!ctx) return;
-  const bus = opts.bus ?? sfxBus;
+  const bus = opts.bus ?? sfxTarget ?? sfxBus;
   if (!bus) return;
   const o = ctx.createOscillator();
   const g = ctx.createGain();
@@ -193,7 +197,7 @@ function noise(
   opts: { peak?: number; hp?: number; bp?: number; q?: number; bus?: GainNode | null } = {},
 ) {
   if (!ctx || !noiseBuf) return;
-  const bus = opts.bus ?? sfxBus;
+  const bus = opts.bus ?? sfxTarget ?? sfxBus;
   if (!bus) return;
   const s = ctx.createBufferSource();
   s.buffer = noiseBuf;
@@ -269,12 +273,26 @@ const SFX: Record<SfxName, (t: number) => void> = {
   },
 };
 
-export function playSfx(name: SfxName) {
+/** @param gain 1 未満にすると、その効果音だけ控えめに鳴る */
+export function playSfx(name: SfxName, gain = 1) {
   if (!sfxOn) return;
   unlock();
   if (!ctx || !sfxBus) return;
   if (ctx.state === 'suspended') void ctx.resume();
-  SFX[name](ctx.currentTime + 0.01);
+  if (gain !== 1) {
+    if (!softBus) {
+      softBus = ctx.createGain();
+      softBus.connect(sfxBus);
+    }
+    softBus.gain.value = gain;
+    sfxTarget = softBus;
+  }
+  // SFX は同期的に予約されるので、この間だけ差し替えれば足りる
+  try {
+    SFX[name](ctx.currentTime + 0.01);
+  } finally {
+    sfxTarget = null;
+  }
 }
 
 /* ---------------- BGM（明るいボードゲーム風のループ） ---------------- */

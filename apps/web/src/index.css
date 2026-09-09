@@ -2,26 +2,483 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== 深夜のカードサロン =====
+/* =============================================================================
+   見た目のテーマ
+   -----------------------------------------------------------------------------
+   色・質感はすべてここの CSS 変数で決まる。`<html data-theme="…">` を
+   差し替えるだけで卓もカードも空気も入れ替わる（React の再描画は要らない）。
+
+   ・色は `rgb()` の中身（"R G B"）だけを持たせる。Tailwind 側で
+     `rgb(var(--x-rgb) / <alpha-value>)` として使い、`/40` のような
+     不透明度指定を効かせるため。
+   ・`--num-0 … --num-12`（数字の地色）と `--num-N-ink`（その上の文字色）は
+     `src/lib/theme.ts` がルートへ流し込む。コントラストから機械的に決めるので
+     CSS には書けない。
+   ・`:root[data-theme=…]` に加えて素の `[data-theme=…]` でも受けている。
+     テーマ選択 UI の見本を、いまのテーマの中に埋め込んで描くため。
+   ============================================================================= */
+
+/* ---------- 1. salon 「深夜のカードサロン」（既定） ---------------------------
    漆黒に近い紺の部屋。卓の中央だけを暖かいランプが照らす。
    金はごく控えめに（7・手番・修飾カード）だけ使う。 */
-:root {
-  --ink: #0a0e1a;
-  --ink-2: #101728;
-  --ink-3: #18213a;
-  --ink-4: #232e4b;
-  --felt: #124633;
-  --felt-hi: #1c6b4c;
-  --gold: #f2c14e;
-  --gold-deep: #c9932b;
-  --gold-dim: #6f5a24;
-  --cream: #f6f1e3;
-  --muted: #8d95ab;
-  --rose: #e0475e;
-  --frost: #8fd8ee;
+:root,
+:root[data-theme='salon'],
+[data-theme='salon'] {
+  --ink-rgb: 10 14 26;
+  --ink2-rgb: 16 23 40;
+  --ink3-rgb: 24 33 58;
+  --ink4-rgb: 35 46 75;
+  --felt-rgb: 18 70 51;
+  --feltink-rgb: 246 241 227;
+  --feltgold-rgb: 242 193 78;
+  --feltchip-rgb: 0 0 0;
+  --gold-rgb: 242 193 78;
+  --golddeep-rgb: 201 147 43;
+  --golddim-rgb: 111 90 36;
+  --cream-rgb: 246 241 227;
+  --muted-rgb: 141 149 171;
+  --rose-rgb: 224 71 94;
+  --frost-rgb: 143 216 238;
+  --mint-rgb: 110 231 183;
+  --edge-rgb: 255 255 255;
+  --foilink-rgb: 58 42 6;
+  --scrim-rgb: 0 0 0;
+  --pulse-rgb: 230 126 34;
+  --seven-rgb: 242 193 78;
+  --seven-lit-rgb: 255 227 160;
+
+  --seven: rgb(var(--seven-rgb));
+  --seven-lit: rgb(var(--seven-lit-rgb));
+  --seven-glow: rgba(242, 193, 78, 0.9);
   --line: rgba(246, 241, 227, 0.1);
   --lamp: rgba(242, 193, 78, 0.14);
+  --glow: rgba(242, 193, 78, 0.8);
+
+  --font-display: 'Bricolage Grotesque', 'Zen Kaku Gothic New', Georgia, serif;
+  --font-jp: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  --body-track: 0em;
+
+  /* 卓中央のフェルトの明かり + 上方からのランプ */
+  --page-bg:
+    radial-gradient(120% 62% at 50% 26%, rgba(28, 102, 74, 0.4) 0%, rgba(12, 34, 27, 0.22) 46%, rgba(10, 14, 26, 0) 72%),
+    radial-gradient(70% 34% at 50% -4%, var(--lamp), rgba(10, 14, 26, 0) 62%);
+  --grain: 0.06;
+  --grain-blend: normal;
+  --grain-size: auto;
+  --grain-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  --felt-bg:
+    radial-gradient(110% 130% at 50% 0%, rgba(38, 122, 90, 0.55), rgba(10, 40, 30, 0.55) 70%),
+    linear-gradient(180deg, #10402f, #0b2a20);
+  --felt-border: 1px solid rgba(246, 241, 227, 0.08);
+  --felt-shadow:
+    inset 0 1px 0 rgba(246, 241, 227, 0.09),
+    inset 0 -24px 40px -24px rgba(0, 0, 0, 0.8),
+    0 10px 30px -14px rgba(0, 0, 0, 0.9);
+
+  --lacquer-bg: linear-gradient(180deg, rgba(24, 33, 58, 0.92), rgba(16, 23, 40, 0.92));
+  --lacquer-border: 1px solid var(--line);
+  --lacquer-shadow: inset 0 1px 0 rgba(246, 241, 227, 0.06);
+
+  --lit-bg:
+    linear-gradient(180deg, rgba(242, 193, 78, 0.16), rgba(242, 193, 78, 0.03) 46%, rgba(24, 33, 58, 0.9)),
+    linear-gradient(180deg, rgba(35, 46, 75, 0.95), rgba(16, 23, 40, 0.95));
+  --lit-shadow: 0 0 0 1.5px var(--seven), 0 12px 30px -14px rgba(242, 193, 78, 0.55);
+  --stay-bg: #141d33;
+
+  --foil: linear-gradient(135deg, #f9e08a 0%, #f2c14e 34%, #c9932b 66%, #f6d585 100%);
+
+  --card-shell: linear-gradient(180deg, #fbf7ec, #ded6c2);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), 0 6px 16px -6px rgba(0, 0, 0, 0.6);
+  --card-sheen: linear-gradient(152deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 42%, rgba(0, 0, 0, 0.22));
+  --card-round: 0.15;
+  --card-ring: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+  --seven-ring: inset 0 0 0 1.5px rgba(242, 193, 78, 0.95);
+  --num-shadow: 0 2px 6px rgba(0, 0, 0, 0.32);
+
+  --frost-wash: linear-gradient(158deg, rgba(190, 235, 250, 0.42), rgba(120, 190, 225, 0.18) 45%, rgba(255, 255, 255, 0.3));
+  --frost-ring: inset 0 0 0 2px rgba(143, 216, 238, 0.75);
+
+  --act-freeze-bg: linear-gradient(158deg, #bfe9f8 0%, #6bc0dd 46%, #3d92b4 100%);
+  --act-freeze-ink: #ffffff;
+  --act-freeze-ring: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
+  --act-triple-bg: linear-gradient(158deg, #ffc861 0%, #f0902c 48%, #d2661a 100%);
+  --act-triple-ink: #ffffff;
+  --act-triple-ring: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
+  --act-insurance-bg: linear-gradient(158deg, #63d9a0 0%, #28a771 48%, #12724c 100%);
+  --act-insurance-ink: #ffffff;
+  --act-insurance-ring: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
+  --act-insurance-mark: #12724c;
 }
+
+/* ---------- 2. wa 「和 — 畳と金箔」 -----------------------------------------
+   生成りの和紙に墨。卓は畳、縁は金箔の細い線。差し色は藍と朱。 */
+:root[data-theme='wa'],
+[data-theme='wa'] {
+  --ink-rgb: 239 230 210;
+  --ink2-rgb: 230 219 195;
+  --ink3-rgb: 250 244 230;
+  --ink4-rgb: 221 208 180;
+  --felt-rgb: 85 112 63;
+  --feltink-rgb: 249 244 232;
+  --feltgold-rgb: 240 220 160;
+  --feltchip-rgb: 0 0 0;
+  --gold-rgb: 122 90 18;
+  --golddeep-rgb: 154 114 24;
+  --golddim-rgb: 201 162 39;
+  --cream-rgb: 42 38 34;
+  --muted-rgb: 107 97 87;
+  --rose-rgb: 179 49 42;
+  --frost-rgb: 43 107 116;
+  --mint-rgb: 47 111 79;
+  --edge-rgb: 42 38 34;
+  --foilink-rgb: 58 42 6;
+  --scrim-rgb: 44 34 22;
+  --pulse-rgb: 199 62 46;
+  --seven-rgb: 122 90 18;
+  --seven-lit-rgb: 199 62 46;
+
+  --seven: rgb(var(--seven-rgb));
+  --seven-lit: rgb(var(--seven-lit-rgb));
+  --seven-glow: rgba(199, 62, 46, 0.55);
+  --line: rgba(42, 38, 34, 0.14);
+  --lamp: rgba(201, 162, 39, 0.16);
+  --glow: rgba(154, 114, 24, 0.45);
+
+  --font-display: 'Zen Kaku Gothic New', 'Hiragino Mincho ProN', 'Bricolage Grotesque', serif;
+  --font-jp: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  --body-track: 0.02em;
+
+  /* 和紙：ごく淡い暖色のむらと、上からの行灯 */
+  --page-bg:
+    radial-gradient(90% 45% at 50% -6%, rgba(201, 162, 39, 0.22), rgba(239, 230, 210, 0) 68%),
+    radial-gradient(120% 70% at 50% 110%, rgba(133, 152, 110, 0.22), rgba(239, 230, 210, 0) 60%);
+  --grain: 0.05;
+  --grain-blend: multiply;
+  --grain-size: auto;
+  --grain-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55 0.03' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  /* 畳：横の織り目に、縦の目地 */
+  --felt-bg:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.09) 0 1px, rgba(0, 0, 0, 0) 1px 4px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 2px, rgba(0, 0, 0, 0) 2px 7px),
+    linear-gradient(180deg, #5e7a4a, #48602f);
+  --felt-border: 1px solid rgba(154, 114, 24, 0.55);
+  --felt-shadow:
+    inset 0 0 0 3px rgba(201, 162, 39, 0.16),
+    inset 0 -20px 34px -22px rgba(0, 0, 0, 0.55),
+    0 8px 22px -16px rgba(58, 44, 20, 0.7);
+
+  --lacquer-bg: linear-gradient(180deg, rgba(252, 248, 238, 0.95), rgba(243, 236, 219, 0.95));
+  --lacquer-border: 1px solid rgba(154, 114, 24, 0.22);
+  --lacquer-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 6px 18px -14px rgba(58, 44, 20, 0.5);
+
+  --lit-bg:
+    linear-gradient(180deg, rgba(201, 162, 39, 0.2), rgba(201, 162, 39, 0.05) 46%, rgba(252, 248, 238, 0.96)),
+    linear-gradient(180deg, rgba(250, 244, 230, 0.98), rgba(243, 236, 219, 0.98));
+  --lit-shadow: 0 0 0 1.5px rgba(199, 62, 46, 0.85), 0 10px 26px -16px rgba(199, 62, 46, 0.5);
+  --stay-bg: #e7eee4;
+
+  --foil: linear-gradient(135deg, #f6e6b4 0%, #dcbb5c 32%, #a8811f 66%, #ecd694 100%);
+
+  --card-shell: linear-gradient(180deg, #fdfaf2, #ece3ce);
+  --card-shadow: 0 1px 2px rgba(58, 44, 20, 0.28), 0 6px 14px -8px rgba(58, 44, 20, 0.35);
+  --card-sheen: linear-gradient(152deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0) 46%, rgba(58, 44, 20, 0.14));
+  --card-round: 0.13;
+  --card-ring: inset 0 0 0 1px rgba(154, 114, 24, 0.45);
+  --seven-ring: inset 0 0 0 1.5px rgba(240, 220, 160, 0.95);
+  --num-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+
+  --frost-wash: linear-gradient(158deg, rgba(90, 150, 170, 0.34), rgba(200, 225, 235, 0.24) 45%, rgba(255, 255, 255, 0.4));
+  --frost-ring: inset 0 0 0 2px rgba(43, 107, 116, 0.6);
+
+  --act-freeze-bg: linear-gradient(158deg, #7fb6bd 0%, #2b6b74 52%, #1b4a55 100%);
+  --act-freeze-ink: #f9f4e8;
+  --act-freeze-ring: inset 0 0 0 1px rgba(154, 114, 24, 0.5);
+  --act-triple-bg: linear-gradient(158deg, #e8a300 0%, #c73e2e 55%, #8f2233 100%);
+  --act-triple-ink: #f9f4e8;
+  --act-triple-ring: inset 0 0 0 1px rgba(154, 114, 24, 0.5);
+  --act-insurance-bg: linear-gradient(158deg, #6f9a5a 0%, #35784f 52%, #1f4c33 100%);
+  --act-insurance-ink: #f9f4e8;
+  --act-insurance-ring: inset 0 0 0 1px rgba(154, 114, 24, 0.5);
+  --act-insurance-mark: #35784f;
+}
+
+/* ---------- 3. candy 「ポップ・キャンディ」 ----------------------------------
+   クリームとミントの昼。角は大きく丸く、影はやわらかく。 */
+:root[data-theme='candy'],
+[data-theme='candy'] {
+  --ink-rgb: 255 247 237;
+  --ink2-rgb: 255 238 226;
+  --ink3-rgb: 255 255 255;
+  --ink4-rgb: 255 224 204;
+  --felt-rgb: 205 240 230;
+  --feltink-rgb: 47 79 73;
+  --feltgold-rgb: 194 46 112;
+  --feltchip-rgb: 255 255 255;
+  --gold-rgb: 194 46 112;
+  --golddeep-rgb: 224 69 123;
+  --golddim-rgb: 255 175 205;
+  --cream-rgb: 56 36 58;
+  --muted-rgb: 124 106 128;
+  --rose-rgb: 201 36 63;
+  --frost-rgb: 18 121 143;
+  --mint-rgb: 15 122 92;
+  --edge-rgb: 56 36 58;
+  --foilink-rgb: 255 255 255;
+  --scrim-rgb: 60 32 48;
+  --pulse-rgb: 240 122 26;
+  --seven-rgb: 194 46 112;
+  --seven-lit-rgb: 226 106 20;
+
+  --seven: rgb(var(--seven-rgb));
+  --seven-lit: rgb(var(--seven-lit-rgb));
+  --seven-glow: rgba(255, 138, 208, 0.85);
+  --line: rgba(56, 36, 58, 0.12);
+  --lamp: rgba(255, 175, 205, 0.3);
+  --glow: rgba(224, 69, 123, 0.42);
+
+  --font-display: 'Bricolage Grotesque', 'Zen Kaku Gothic New', Georgia, serif;
+  --font-jp: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  --body-track: 0em;
+
+  --page-bg:
+    radial-gradient(80% 40% at 50% -4%, rgba(255, 190, 215, 0.5), rgba(255, 247, 237, 0) 70%),
+    radial-gradient(90% 50% at 50% 108%, rgba(179, 240, 226, 0.65), rgba(255, 247, 237, 0) 66%);
+  --grain: 0.03;
+  --grain-blend: multiply;
+  --grain-size: 18px 18px;
+  --grain-tile: radial-gradient(rgba(56, 36, 58, 0.55) 1px, rgba(0, 0, 0, 0) 1.6px);
+
+  /* パステルのストライプ卓 */
+  --felt-bg:
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.62) 0 15px, rgba(255, 255, 255, 0) 15px 30px),
+    linear-gradient(180deg, #d7f5ee, #b9e9dc);
+  --felt-border: 1px solid rgba(56, 36, 58, 0.08);
+  --felt-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.8), 0 12px 26px -18px rgba(88, 60, 80, 0.55);
+
+  --lacquer-bg: linear-gradient(180deg, #ffffff, #fff3e9);
+  --lacquer-border: 1px solid rgba(56, 36, 58, 0.08);
+  --lacquer-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.9), 0 10px 22px -16px rgba(88, 60, 80, 0.4);
+
+  --lit-bg: linear-gradient(180deg, #fff0f6, #ffe4ef);
+  --lit-shadow: 0 0 0 2px rgba(224, 69, 123, 0.85), 0 14px 28px -16px rgba(224, 69, 123, 0.5);
+  --stay-bg: #e6f6f2;
+
+  --foil: linear-gradient(135deg, #ff8fb1 0%, #e0457b 44%, #c02a6d 78%, #ff7ba6 100%);
+
+  --card-shell: linear-gradient(180deg, #ffffff, #ffeef4);
+  --card-shadow: 0 2px 3px rgba(120, 80, 100, 0.16), 0 10px 20px -10px rgba(120, 80, 100, 0.32);
+  --card-sheen: linear-gradient(152deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 52%, rgba(120, 80, 100, 0.1));
+  --card-round: 0.24;
+  --card-ring: inset 0 0 0 2px rgba(255, 255, 255, 0.75);
+  --seven-ring: inset 0 0 0 2.5px rgba(255, 255, 255, 0.95);
+  --num-shadow: none;
+
+  --frost-wash: linear-gradient(158deg, rgba(150, 225, 245, 0.5), rgba(210, 245, 255, 0.3) 45%, rgba(255, 255, 255, 0.55));
+  --frost-ring: inset 0 0 0 2px rgba(18, 121, 143, 0.55);
+
+  --act-freeze-bg: linear-gradient(158deg, #8fe3f5 0%, #35b6d8 48%, #1c86ab 100%);
+  --act-freeze-ink: #ffffff;
+  --act-freeze-ring: inset 0 0 0 2px rgba(255, 255, 255, 0.6);
+  --act-triple-bg: linear-gradient(158deg, #ffc46b 0%, #ff8a3d 48%, #ef5f2a 100%);
+  --act-triple-ink: #ffffff;
+  --act-triple-ring: inset 0 0 0 2px rgba(255, 255, 255, 0.6);
+  --act-insurance-bg: linear-gradient(158deg, #8ce9bf 0%, #2fbb84 48%, #199566 100%);
+  --act-insurance-ink: #ffffff;
+  --act-insurance-ring: inset 0 0 0 2px rgba(255, 255, 255, 0.6);
+  --act-insurance-mark: #199566;
+}
+
+/* ---------- 4. arcade 「レトロ・アーケード」 --------------------------------
+   黒の筐体。シアンとマゼンタが光り、床はグリッド、面はスキャンライン。 */
+:root[data-theme='arcade'],
+[data-theme='arcade'] {
+  --ink-rgb: 5 6 11;
+  --ink2-rgb: 10 13 24;
+  --ink3-rgb: 18 22 42;
+  --ink4-rgb: 27 33 64;
+  --felt-rgb: 10 16 32;
+  --feltink-rgb: 223 246 255;
+  --feltgold-rgb: 255 226 61;
+  --feltchip-rgb: 0 0 0;
+  --gold-rgb: 255 226 61;
+  --golddeep-rgb: 255 46 166;
+  --golddim-rgb: 120 100 20;
+  --cream-rgb: 223 246 255;
+  --muted-rgb: 127 143 181;
+  --rose-rgb: 255 46 166;
+  --frost-rgb: 34 230 255;
+  --mint-rgb: 33 224 138;
+  --edge-rgb: 34 230 255;
+  --foilink-rgb: 5 6 11;
+  --scrim-rgb: 0 0 0;
+  --pulse-rgb: 255 138 31;
+  --seven-rgb: 255 226 61;
+  --seven-lit-rgb: 34 230 255;
+
+  --seven: rgb(var(--seven-rgb));
+  --seven-lit: rgb(var(--seven-lit-rgb));
+  --seven-glow: rgba(255, 226, 61, 0.95);
+  --line: rgba(34, 230, 255, 0.16);
+  --lamp: rgba(255, 46, 166, 0.16);
+  --glow: rgba(34, 230, 255, 0.7);
+
+  --font-display: 'Bricolage Grotesque', 'Zen Kaku Gothic New', Georgia, serif;
+  --font-jp: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  --body-track: 0.02em;
+
+  /* 奥へ伸びるグリッドの床 + 上のネオン */
+  --page-bg:
+    repeating-linear-gradient(90deg, rgba(34, 230, 255, 0.07) 0 1px, rgba(5, 6, 11, 0) 1px 44px),
+    radial-gradient(120% 55% at 50% 116%, rgba(255, 46, 166, 0.32), rgba(5, 6, 11, 0) 62%),
+    radial-gradient(70% 34% at 50% -6%, rgba(34, 230, 255, 0.22), rgba(5, 6, 11, 0) 64%);
+  --grain: 0.08;
+  --grain-blend: normal;
+  --grain-size: auto;
+  --grain-tile: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.85) 0 1px, rgba(255, 255, 255, 0) 1px 3px);
+
+  --felt-bg:
+    repeating-linear-gradient(0deg, rgba(34, 230, 255, 0.14) 0 1px, rgba(0, 0, 0, 0) 1px 15px),
+    repeating-linear-gradient(90deg, rgba(255, 46, 166, 0.12) 0 1px, rgba(0, 0, 0, 0) 1px 15px),
+    linear-gradient(180deg, #0b1226, #05060b);
+  --felt-border: 1px solid rgba(34, 230, 255, 0.35);
+  --felt-shadow: inset 0 0 26px rgba(34, 230, 255, 0.1), 0 0 22px -12px rgba(34, 230, 255, 0.55);
+
+  --lacquer-bg: linear-gradient(180deg, rgba(16, 20, 40, 0.94), rgba(8, 10, 20, 0.94));
+  --lacquer-border: 1px solid rgba(34, 230, 255, 0.18);
+  --lacquer-shadow: inset 0 1px 0 rgba(34, 230, 255, 0.12);
+
+  --lit-bg:
+    linear-gradient(180deg, rgba(255, 46, 166, 0.16), rgba(34, 230, 255, 0.05) 46%, rgba(10, 13, 24, 0.94));
+  --lit-shadow: 0 0 0 1.5px rgba(34, 230, 255, 0.9), 0 0 26px -6px rgba(34, 230, 255, 0.6);
+  --stay-bg: #0d1a2c;
+
+  --foil: linear-gradient(135deg, #22e6ff 0%, #7ef0ff 26%, #ff2ea6 74%, #ffe23d 100%);
+
+  --card-shell: linear-gradient(180deg, #182142, #0a0d18);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.8), 0 0 14px -4px rgba(34, 230, 255, 0.45);
+  --card-sheen: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.34) 0 1px, rgba(255, 255, 255, 0.03) 1px 3px);
+  --card-round: 0.12;
+  --card-ring: inset 0 0 0 1.4px rgba(34, 230, 255, 0.5);
+  --seven-ring: inset 0 0 0 1.6px rgb(var(--seven-rgb)), inset 0 0 14px -2px rgb(var(--seven-rgb));
+  --num-shadow: 0 0 10px rgba(34, 230, 255, 0.5);
+  /* 数字の面は光らせず、縁と字だけをネオンにする（下の造形ルールで1枚ごとの色を差す） */
+  --face-bg: #0a0d18;
+
+  --frost-wash: linear-gradient(158deg, rgba(34, 230, 255, 0.3), rgba(34, 230, 255, 0.08) 45%, rgba(255, 255, 255, 0.16));
+  --frost-ring: inset 0 0 0 2px rgba(34, 230, 255, 0.85);
+
+  --act-freeze-bg: linear-gradient(158deg, #0f1a30 0%, #0a1226 100%);
+  --act-freeze-ink: #22e6ff;
+  --act-freeze-ring: inset 0 0 0 1.4px #22e6ff, inset 0 0 14px -3px #22e6ff;
+  --act-triple-bg: linear-gradient(158deg, #2a1220 0%, #150a14 100%);
+  --act-triple-ink: #ff2ea6;
+  --act-triple-ring: inset 0 0 0 1.4px #ff2ea6, inset 0 0 14px -3px #ff2ea6;
+  --act-insurance-bg: linear-gradient(158deg, #0d2418 0%, #071410 100%);
+  --act-insurance-ink: #21e08a;
+  --act-insurance-ring: inset 0 0 0 1.4px #21e08a, inset 0 0 14px -3px #21e08a;
+  --act-insurance-mark: #071410;
+}
+
+/* ---------- 5. picnic 「森のピクニック」 -------------------------------------
+   木のテーブルにクラフト紙のカード。木漏れ日のあたたかい昼。 */
+:root[data-theme='picnic'],
+[data-theme='picnic'] {
+  --ink-rgb: 247 240 224;
+  --ink2-rgb: 238 226 198;
+  --ink3-rgb: 232 217 181;
+  --ink4-rgb: 220 201 158;
+  --felt-rgb: 122 82 48;
+  --feltink-rgb: 249 242 226;
+  --feltgold-rgb: 240 196 106;
+  --feltchip-rgb: 0 0 0;
+  --gold-rgb: 125 78 18;
+  --golddeep-rgb: 154 99 20;
+  --golddim-rgb: 201 162 100;
+  --cream-rgb: 58 42 26;
+  --muted-rgb: 122 102 80;
+  --rose-rgb: 179 49 42;
+  --frost-rgb: 47 107 143;
+  --mint-rgb: 45 110 74;
+  --edge-rgb: 58 42 26;
+  --foilink-rgb: 58 42 6;
+  --scrim-rgb: 52 34 18;
+  --pulse-rgb: 201 113 58;
+  --seven-rgb: 125 78 18;
+  --seven-lit-rgb: 207 154 28;
+
+  --seven: rgb(var(--seven-rgb));
+  --seven-lit: rgb(var(--seven-lit-rgb));
+  --seven-glow: rgba(207, 154, 28, 0.75);
+  --line: rgba(58, 42, 26, 0.14);
+  --lamp: rgba(255, 214, 140, 0.34);
+  --glow: rgba(154, 99, 20, 0.42);
+
+  --font-display: 'Zen Kaku Gothic New', 'Bricolage Grotesque', 'Hiragino Sans', sans-serif;
+  --font-jp: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  --body-track: 0.01em;
+
+  /* 木漏れ日：左上からの日ざしと、下からの草の照り返し */
+  --page-bg:
+    radial-gradient(70% 40% at 14% -6%, rgba(255, 226, 160, 0.7), rgba(247, 240, 224, 0) 64%),
+    radial-gradient(90% 46% at 50% 110%, rgba(150, 178, 110, 0.34), rgba(247, 240, 224, 0) 62%);
+  --grain: 0.05;
+  --grain-blend: multiply;
+  --grain-size: auto;
+  --grain-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='150' height='150' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  /* 木目：不揃いな縦の年輪 */
+  --felt-bg:
+    repeating-linear-gradient(
+      92deg,
+      rgba(58, 34, 14, 0.24) 0 2px,
+      rgba(122, 82, 48, 0) 2px 9px,
+      rgba(255, 224, 180, 0.09) 9px 11px,
+      rgba(122, 82, 48, 0) 11px 23px
+    ),
+    repeating-linear-gradient(88deg, rgba(58, 34, 14, 0.12) 0 1px, rgba(122, 82, 48, 0) 1px 37px),
+    linear-gradient(180deg, #8a5f3a, #6b4527);
+  --felt-border: 1px solid rgba(58, 34, 14, 0.4);
+  --felt-shadow: inset 0 1px 0 rgba(255, 224, 180, 0.22), 0 10px 24px -16px rgba(58, 34, 14, 0.7);
+
+  /* クラフト紙のパネル */
+  --lacquer-bg: linear-gradient(180deg, #f3e8cd, #e6d5ac);
+  --lacquer-border: 1px solid rgba(58, 42, 26, 0.16);
+  --lacquer-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 8px 18px -14px rgba(58, 34, 14, 0.5);
+
+  --lit-bg: linear-gradient(180deg, rgba(255, 214, 140, 0.55), rgba(243, 232, 205, 0.98) 60%);
+  --lit-shadow: 0 0 0 2px rgba(154, 99, 20, 0.8), 0 12px 26px -16px rgba(154, 99, 20, 0.55);
+  --stay-bg: #e3ead8;
+
+  --foil: linear-gradient(135deg, #f7d69a 0%, #e0ab4e 36%, #b07f22 70%, #f2d79c 100%);
+
+  --card-shell: linear-gradient(180deg, #ecdcb7, #cdb488);
+  --card-shadow: 0 1px 2px rgba(58, 34, 14, 0.3), 0 8px 16px -8px rgba(58, 34, 14, 0.42);
+  --card-sheen: linear-gradient(152deg, rgba(255, 250, 235, 0.24), rgba(255, 255, 255, 0) 48%, rgba(58, 34, 14, 0.16));
+  --card-round: 0.17;
+  --card-ring: inset 0 0 0 1px rgba(58, 34, 14, 0.28);
+  --seven-ring: inset 0 0 0 1.6px rgba(247, 214, 154, 0.95);
+  --num-shadow: 0 1px 3px rgba(40, 24, 10, 0.35);
+
+  --frost-wash: linear-gradient(158deg, rgba(150, 205, 230, 0.42), rgba(210, 235, 245, 0.24) 45%, rgba(255, 255, 255, 0.44));
+  --frost-ring: inset 0 0 0 2px rgba(47, 107, 143, 0.6);
+
+  --act-freeze-bg: linear-gradient(158deg, #9fd0e6 0%, #3d7fb0 50%, #275a80 100%);
+  --act-freeze-ink: #ffffff;
+  --act-freeze-ring: inset 0 0 0 1px rgba(58, 34, 14, 0.24);
+  --act-triple-bg: linear-gradient(158deg, #e8b662 0%, #c9713a 50%, #97501f 100%);
+  --act-triple-ink: #ffffff;
+  --act-triple-ring: inset 0 0 0 1px rgba(58, 34, 14, 0.24);
+  --act-insurance-bg: linear-gradient(158deg, #9ec472 0%, #4b8a52 50%, #2f6237 100%);
+  --act-insurance-ink: #ffffff;
+  --act-insurance-ring: inset 0 0 0 1px rgba(58, 34, 14, 0.24);
+  --act-insurance-mark: #2f6237;
+}
+
+/* =============================================================================
+   土台
+   ============================================================================= */
 
 html,
 body,
@@ -29,30 +486,36 @@ body,
   height: 100%;
 }
 
-body {
-  margin: 0;
-  color: var(--cream);
-  font-family: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-  background-color: var(--ink);
-  /* 卓中央のフェルトの明かり + 上方からのランプ */
-  background-image:
-    radial-gradient(120% 62% at 50% 26%, rgba(28, 102, 74, 0.4) 0%, rgba(12, 34, 27, 0.22) 46%, rgba(10, 14, 26, 0) 72%),
-    radial-gradient(70% 34% at 50% -4%, var(--lamp), rgba(10, 14, 26, 0) 62%);
-  background-attachment: fixed;
-  background-repeat: no-repeat;
+/* `sticky top-0` の要素は、安全領域のぶんだけ下で止める */
+.sticky-safe {
+  top: env(safe-area-inset-top);
 }
 
-/* フィルムグレイン（全面・操作は透過） */
+body {
+  margin: 0;
+  color: rgb(var(--cream-rgb));
+  font-family: var(--font-jp);
+  letter-spacing: var(--body-track);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  background-color: rgb(var(--ink-rgb));
+  background-image: var(--page-bg);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  transition: background-color 0.35s ease, color 0.35s ease;
+}
+
+/* 粒子（フィルムグレイン／和紙の繊維／スキャンライン）。操作は透過する */
 body::after {
   content: '';
   position: fixed;
   inset: 0;
   z-index: 9999;
   pointer-events: none;
-  opacity: 0.06;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: var(--grain);
+  mix-blend-mode: var(--grain-blend);
+  background-image: var(--grain-tile);
+  background-size: var(--grain-size);
 }
 
 /* iOS で入力欄のテキスト選択・カーソル操作ができるようにする。
@@ -66,53 +529,83 @@ select {
   font-size: max(16px, 1em);
 }
 
-/* ---------- 部品 ---------- */
+/* =============================================================================
+   部品（すべてテーマ変数から組む）
+   ============================================================================= */
 
-/* 卓（フェルト）パネル */
+/* 卓（フェルト・畳・木・グリッド） */
 .felt {
-  background:
-    radial-gradient(110% 130% at 50% 0%, rgba(38, 122, 90, 0.55), rgba(10, 40, 30, 0.55) 70%),
-    linear-gradient(180deg, #10402f, #0b2a20);
-  border: 1px solid rgba(246, 241, 227, 0.08);
-  box-shadow:
-    inset 0 1px 0 rgba(246, 241, 227, 0.09),
-    inset 0 -24px 40px -24px rgba(0, 0, 0, 0.8),
-    0 10px 30px -14px rgba(0, 0, 0, 0.9);
+  background: var(--felt-bg);
+  border: var(--felt-border);
+  box-shadow: var(--felt-shadow);
 }
 
-/* 漆器のような黒パネル */
+/* 面（漆器・和紙・キャンディの白・クラフト紙） */
 .lacquer {
-  background: linear-gradient(180deg, rgba(24, 33, 58, 0.92), rgba(16, 23, 40, 0.92));
-  border: 1px solid var(--line);
-  box-shadow: inset 0 1px 0 rgba(246, 241, 227, 0.06);
+  background: var(--lacquer-bg);
+  border: var(--lacquer-border);
+  box-shadow: var(--lacquer-shadow);
 }
 
-/* 手番の行に落ちるランプ光 */
+/* 手番の行に落ちる光 */
 .lamp-lit {
-  background:
-    linear-gradient(180deg, rgba(242, 193, 78, 0.16), rgba(242, 193, 78, 0.03) 46%, rgba(24, 33, 58, 0.9)),
-    linear-gradient(180deg, rgba(35, 46, 75, 0.95), rgba(16, 23, 40, 0.95));
-  box-shadow: 0 0 0 1.5px var(--gold), 0 12px 30px -14px rgba(242, 193, 78, 0.55);
+  background: var(--lit-bg);
+  box-shadow: var(--lit-shadow);
 }
 
+/* 「降りた」行の地色 */
+.stayed-row {
+  background: var(--stay-bg);
+}
+
+/* 金箔（＝そのテーマの主役ボタン。文字色まで持つ） */
 .gold-foil {
-  background: linear-gradient(135deg, #f9e08a 0%, #f2c14e 34%, #c9932b 66%, #f6d585 100%);
+  background: var(--foil);
+  color: rgb(var(--foilink-rgb));
 }
 
 .hairline {
   border-bottom: 1px solid var(--line);
 }
 
-/* 数字カードの縁（クリーム色のインセット） */
+/* 氷結の覆い */
+.frost-wash {
+  background: var(--frost-wash);
+  box-shadow: var(--frost-ring);
+}
+
+/* ---------- カード ---------- */
+
+/* カードの縁（紙） */
 .card-shell {
-  background: linear-gradient(180deg, #fbf7ec, #ded6c2);
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.55),
-    0 6px 16px -6px rgba(0, 0, 0, 0.6);
+  background: var(--card-shell);
+  box-shadow: var(--card-shadow);
 }
 
 .card-sheen {
-  background-image: linear-gradient(152deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 42%, rgba(0, 0, 0, 0.22));
+  background-image: var(--card-sheen);
+}
+
+/* 数字の面。`--n`（地色）と `--ni`（文字色）は CardView が1枚ごとに差す */
+.card-face {
+  background: var(--face-bg, var(--n));
+  color: var(--ni);
+  box-shadow: var(--card-ring);
+}
+
+.card-face[data-seven='1'] {
+  box-shadow: var(--seven-ring);
+}
+
+.card-num {
+  text-shadow: var(--num-shadow);
+}
+
+/* アクション・修飾カードの面 */
+.card-act {
+  background: var(--act-bg);
+  color: var(--act-ink);
+  box-shadow: var(--act-ring);
 }
 
 /* 山札の束（重なり） */
@@ -136,6 +629,47 @@ select {
 }
 .no-scrollbar {
   scrollbar-width: none;
+}
+
+/* =============================================================================
+   テーマごとの造形（変数では書けない、形そのものの違い）
+   ============================================================================= */
+
+/* キャンディ：角を大きく丸める */
+[data-theme='candy'] .lacquer,
+[data-theme='candy'] .felt {
+  border-radius: 26px;
+}
+[data-theme='candy'] .rounded-2xl {
+  border-radius: 20px;
+}
+[data-theme='candy'] .rounded-3xl {
+  border-radius: 28px;
+}
+
+/* アーケード：面は暗いまま、縁と数字だけがその数字の色で光る。
+   `--n` / `--ni` は1枚ごとに .card-face 側で定義されるので、ここで参照する */
+[data-theme='arcade'] .card-face {
+  box-shadow: inset 0 0 0 1.4px var(--n), inset 0 0 12px -3px var(--n);
+}
+[data-theme='arcade'] .card-face[data-seven='1'] {
+  box-shadow:
+    inset 0 0 0 1.8px rgb(var(--seven-rgb)),
+    inset 0 0 16px -2px rgb(var(--seven-rgb)),
+    inset 0 0 0 3.2px rgba(255, 46, 166, 0.45);
+}
+[data-theme='arcade'] .card-num {
+  text-shadow: 0 0 9px var(--ni), 0 0 22px var(--ni);
+}
+
+/* アーケード：主役ボタンと「7」はいつも光っている */
+[data-theme='arcade'] .gold-foil {
+  box-shadow: 0 0 22px -6px rgba(34, 230, 255, 0.8);
+}
+
+/* 和：主役ボタンの金箔に、細い縁を足す */
+[data-theme='wa'] .gold-foil {
+  box-shadow: inset 0 0 0 1px rgba(122, 90, 18, 0.55);
 }
 
 @media (prefers-reduced-motion: reduce) {

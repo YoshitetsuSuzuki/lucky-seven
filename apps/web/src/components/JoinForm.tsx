@@ -42,22 +42,22 @@ export default function JoinForm({ code, onJoined }: { code: string; onJoined: (
           <CardBack size="md" className="absolute inset-0" style={{ transform: 'rotate(4deg)' }} />
         </div>
         <div className="min-w-0">
-          <div className="font-display text-[10px] font-extrabold tracking-[0.3em] text-cream/45">ルーム</div>
-          <div className="font-display text-[30px] font-extrabold leading-tight tracking-[0.12em] text-gold">{formatCode(code)}</div>
+          <div className="font-display text-[10px] font-extrabold tracking-[0.3em] text-feltink/60">ルーム</div>
+          <div className="font-display text-[30px] font-extrabold leading-tight tracking-[0.12em] text-feltgold">{formatCode(code)}</div>
         </div>
       </div>
 
       <label className="block">
         <span className="font-display text-[11px] font-extrabold tracking-[0.24em] text-cream/40">ニックネーム</span>
         <input
-          className="mt-1.5 w-full rounded-2xl border border-white/10 bg-ink2/90 px-4 py-3.5 text-lg outline-none transition focus:border-gold/50 focus:ring-2 focus:ring-gold/25"
+          className="mt-1.5 w-full rounded-2xl border border-edge/10 bg-ink2/90 px-4 py-3.5 text-lg outline-none transition focus:border-gold/50 focus:ring-2 focus:ring-gold/25"
           value={name}
           maxLength={12}
           onChange={(e) => setName(e.target.value)}
         />
       </label>
       <button
-        className="gold-foil w-full rounded-2xl py-4 font-display text-lg font-extrabold text-[#3a2a06] shadow-[0_16px_40px_-16px_rgba(242,193,78,.9)] transition active:scale-[.98] disabled:opacity-40"
+        className="gold-foil w-full rounded-2xl py-4 font-display text-lg font-extrabold shadow-[0_16px_40px_-16px_var(--glow)] transition active:scale-[.98] disabled:opacity-40"
         disabled={!name.trim() || busy}
         onClick={join}
       >

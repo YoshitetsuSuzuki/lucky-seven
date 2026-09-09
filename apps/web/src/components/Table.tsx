@@ -79,14 +79,14 @@ export default function Table({
 
   return (
     <div className={`mx-auto min-h-full max-w-lg px-3 ${bottomPad}`}>
-      <div className="sticky top-0 z-20 -mx-3 bg-gradient-to-b from-ink via-ink/94 to-transparent px-3 pb-3 pt-1">
+      <div className="sticky-safe sticky z-20 -mx-3 bg-gradient-to-b from-ink via-ink/94 to-transparent px-3 pb-3 pt-1">
         {/* 狭い画面では音のボタンが2行目に回り込む（文字を削らないため） */}
         <header className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 px-0.5 pb-1.5">
           <h1 className="font-display text-[19px] font-extrabold tracking-tight">
             ラッキー
             <span
               key={`seven-${room.version}`}
-              className={`${lucky ? 'text-[#ffe3a0]' : 'text-gold'} ${sevenNow ? 'animate-sevenGlow' : ''}`}
+              className={`${lucky ? 'text-sevenlit' : 'text-seven'} ${sevenNow ? 'animate-sevenGlow' : ''}`}
             >
               7
             </span>
@@ -104,7 +104,7 @@ export default function Table({
             type="button"
             onClick={() => setHelpOpen(true)}
             aria-label="遊び方"
-            className="ml-auto flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[15px] font-bold leading-none text-muted transition active:scale-95"
+            className="ml-auto flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded-full border border-edge/10 bg-edge/5 text-[15px] font-bold leading-none text-muted transition active:scale-95"
           >
             <span aria-hidden>？</span>
           </button>
@@ -154,7 +154,7 @@ export default function Table({
             {gameEnd && onShowResult ? (
               <button
                 onClick={onShowResult}
-                className="gold-foil w-full rounded-2xl py-4 font-display text-[21px] font-extrabold tracking-wide text-[#3a2a06] shadow-[0_10px_30px_-12px_rgba(242,193,78,.8)] transition active:scale-[.98]"
+                className="gold-foil w-full rounded-2xl py-4 font-display text-[21px] font-extrabold tracking-wide shadow-[0_10px_30px_-12px_var(--glow)] transition active:scale-[.98]"
               >
                 最終結果を見る
               </button>

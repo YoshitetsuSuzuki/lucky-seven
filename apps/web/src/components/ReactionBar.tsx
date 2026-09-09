@@ -55,7 +55,7 @@ export default function ReactionBar({ code, name }: { code: string; name: string
             key={e}
             onClick={() => send(e)}
             aria-label={`リアクション ${e}`}
-            className="h-11 w-11 rounded-full border border-white/10 bg-ink3/80 text-xl backdrop-blur transition active:scale-90"
+            className="h-11 w-11 rounded-full border border-edge/10 bg-ink3/80 text-xl backdrop-blur transition active:scale-90"
           >
             {e}
           </button>

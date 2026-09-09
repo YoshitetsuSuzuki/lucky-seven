@@ -1,25 +1,45 @@
 /** @type {import('tailwindcss').Config} */
+
+/** 色はすべて CSS 変数（`src/index.css` のテーマ定義）を参照する。
+ *  `/50` のような不透明度指定を効かせるため、変数には "R G B" の数値だけを入れる。 */
+const v = (name) => `rgb(var(--${name}-rgb) / <alpha-value>)`;
+
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       fontFamily: {
-        display: ['"Bricolage Grotesque"', '"Zen Kaku Gothic New"', 'Georgia', 'serif'],
-        jp: ['"Zen Kaku Gothic New"', '"Hiragino Sans"', '"Noto Sans JP"', 'sans-serif'],
+        display: ['var(--font-display)'],
+        jp: ['var(--font-jp)'],
       },
       colors: {
-        ink: '#0a0e1a',
-        ink2: '#101728',
-        ink3: '#18213a',
-        ink4: '#232e4b',
-        felt: '#124633',
-        gold: '#f2c14e',
-        golddeep: '#c9932b',
-        golddim: '#6f5a24',
-        cream: '#f6f1e3',
-        muted: '#8d95ab',
-        rose: '#e0475e',
-        frost: '#8fd8ee',
+        /* 地と面 */
+        ink: v('ink'),
+        ink2: v('ink2'),
+        ink3: v('ink3'),
+        ink4: v('ink4'),
+        /* 卓（フェルト）と、その上に乗せるもの */
+        felt: v('felt'),
+        feltink: v('feltink'),
+        feltgold: v('feltgold'),
+        feltchip: v('feltchip'),
+        /* 差し色と文字 */
+        gold: v('gold'),
+        golddeep: v('golddeep'),
+        golddim: v('golddim'),
+        cream: v('cream'),
+        muted: v('muted'),
+        rose: v('rose'),
+        frost: v('frost'),
+        mint: v('mint'),
+        /* 罫線・薄い被せ（暗いテーマでは白、明るいテーマでは墨） */
+        edge: v('edge'),
+        /* 金箔ボタンの上の文字 / 覆いの黒 */
+        foilink: v('foilink'),
+        scrim: v('scrim'),
+        /* 「7」（ラッキーモードで少し明るくなる） */
+        seven: v('seven'),
+        sevenlit: v('seven-lit'),
       },
       boxShadow: {
         card: '0 1px 2px rgba(0,0,0,.55), 0 6px 16px rgba(0,0,0,.42)',
@@ -41,9 +61,9 @@ export default {
           '100%': { transform: 'translateY(-60px)', opacity: '0' },
         },
         redFlash: {
-          '0%': { backgroundColor: 'rgba(224,71,94,0)' },
-          '25%': { backgroundColor: 'rgba(224,71,94,.34)' },
-          '100%': { backgroundColor: 'rgba(224,71,94,0)' },
+          '0%': { backgroundColor: 'rgb(var(--rose-rgb) / 0)' },
+          '25%': { backgroundColor: 'rgb(var(--rose-rgb) / .34)' },
+          '100%': { backgroundColor: 'rgb(var(--rose-rgb) / 0)' },
         },
         frostIn: {
           '0%': { opacity: '0', transform: 'scale(1.06)' },
@@ -51,8 +71,8 @@ export default {
           '100%': { opacity: '0', transform: 'scale(1)' },
         },
         orangePulse: {
-          '0%': { boxShadow: '0 0 0 0 rgba(230,126,34,.65)' },
-          '100%': { boxShadow: '0 0 0 18px rgba(230,126,34,0)' },
+          '0%': { boxShadow: '0 0 0 0 rgb(var(--pulse-rgb) / .65)' },
+          '100%': { boxShadow: '0 0 0 18px rgb(var(--pulse-rgb) / 0)' },
         },
         sparkOut: {
           '0%': { opacity: '0', transform: 'translate(-50%,-50%) rotate(var(--a)) translateY(0) scale(.2)' },
@@ -60,8 +80,8 @@ export default {
           '100%': { opacity: '0', transform: 'translate(-50%,-50%) rotate(var(--a)) translateY(-72px) scale(1)' },
         },
         sevenGlow: {
-          '0%,100%': { textShadow: '0 0 0 rgba(242,193,78,0)' },
-          '50%': { textShadow: '0 0 18px rgba(242,193,78,.95), 0 0 40px rgba(242,193,78,.5)' },
+          '0%,100%': { textShadow: '0 0 0 rgb(var(--seven-rgb) / 0)' },
+          '50%': { textShadow: '0 0 18px rgb(var(--seven-rgb) / .95), 0 0 40px rgb(var(--seven-rgb) / .5)' },
         },
         fadeUp: {
           '0%': { opacity: '0', transform: 'translateY(6px)' },

@@ -15,12 +15,12 @@ export default function Timer({ deadline, total }: { deadline: number | null; to
   const c = 2 * Math.PI * r;
   return (
     <svg width="34" height="34" viewBox="0 0 36 36" className="shrink-0" role="timer" aria-label={`残り${remain}秒`}>
-      <circle cx="18" cy="18" r={r} stroke="rgba(246,241,227,.12)" strokeWidth="3.5" fill="none" />
+      <circle cx="18" cy="18" r={r} stroke="rgb(var(--cream-rgb) / .14)" strokeWidth="3.5" fill="none" />
       <circle
         cx="18"
         cy="18"
         r={r}
-        stroke={urgent ? '#e0475e' : '#f2c14e'}
+        stroke={urgent ? 'rgb(var(--rose-rgb))' : 'rgb(var(--gold-rgb))'}
         strokeWidth="3.5"
         fill="none"
         strokeDasharray={c}
@@ -34,9 +34,9 @@ export default function Timer({ deadline, total }: { deadline: number | null; to
         y="22.5"
         textAnchor="middle"
         fontSize="13"
-        fill={urgent ? '#e0475e' : '#f6f1e3'}
+        fill={urgent ? 'rgb(var(--rose-rgb))' : 'rgb(var(--cream-rgb))'}
         fontWeight="800"
-        fontFamily="Bricolage Grotesque, Georgia, serif"
+        fontFamily="var(--font-display)"
       >
         {remain}
       </text>

@@ -20,6 +20,30 @@
       rel="stylesheet"
     />
     <title>ラッキーセブン</title>
+    <script>
+      /* 最初の描画より前に、保存してある見た目のテーマを立てる（一瞬ちらつかせないため）。
+         色そのものは CSS 側（:root[data-theme=…]）にある。数字色は src/lib/theme.ts が後から足す。 */
+      (function () {
+        var themes = { salon: 1, wa: 1, candy: 1, arcade: 1, picnic: 1 };
+        var light = { wa: '#efe6d2', candy: '#fff7ed', picnic: '#f7f0e0' };
+        var dark = { salon: '#0a0e1a', arcade: '#05060b' };
+        var id = 'salon';
+        try {
+          var saved = localStorage.getItem('lucky7:theme');
+          if (saved && themes[saved]) id = saved;
+        } catch (e) {
+          /* ignore */
+        }
+        document.documentElement.setAttribute('data-theme', id);
+        var color = light[id] || dark[id];
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m && color) m.setAttribute('content', color);
+        if (light[id]) {
+          var s = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+          if (s) s.setAttribute('content', 'default');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -24,7 +24,7 @@ export default class ErrorBoundary extends Component<Props, State> {
         <p className="break-all text-sm text-muted">{this.state.message}</p>
         <button
           onClick={() => location.reload()}
-          className="gold-foil rounded-2xl px-6 py-3 font-display font-extrabold text-[#3a2a06]"
+          className="gold-foil rounded-2xl px-6 py-3 font-display font-extrabold"
         >
           再読み込み
         </button>

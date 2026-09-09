@@ -17,7 +17,7 @@ const HINT: Record<Pending['type'], string> = {
 const ACCENT: Record<Pending['type'], string> = {
   freeze: 'text-frost',
   triple: 'text-[#f0902c]',
-  give_insurance: 'text-emerald-300',
+  give_insurance: 'text-mint',
 };
 
 export default function TargetModal({
@@ -43,7 +43,7 @@ export default function TargetModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-scrim/70 p-3 backdrop-blur-sm sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="target-modal-title"
@@ -66,7 +66,7 @@ export default function TargetModal({
                 <button
                   disabled={busy}
                   onClick={() => onChoose(p.seat)}
-                  className="w-full rounded-2xl border border-white/10 bg-ink3 px-3 py-2.5 text-left transition active:scale-[.98] disabled:opacity-40"
+                  className="w-full rounded-2xl border border-edge/10 bg-ink3 px-3 py-2.5 text-left transition active:scale-[.98] disabled:opacity-40"
                 >
                   <div className="flex items-center gap-2">
                     <span className="truncate font-bold text-cream/90">
@@ -74,7 +74,7 @@ export default function TargetModal({
                       {isMe && <span className="ml-1 text-[11px] font-normal text-muted">({nameOf(p.seat)})</span>}
                     </span>
                     {p.hasInsurance && (
-                      <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold text-emerald-300">保険</span>
+                      <span className="rounded-full bg-mint/20 px-1.5 py-0.5 text-[10px] font-bold text-mint">保険</span>
                     )}
                     <span className="ml-auto shrink-0 text-[11px] text-muted">
                       今 <b className="font-display text-base text-cream">{now}</b>
