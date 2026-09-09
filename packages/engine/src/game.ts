@@ -63,6 +63,7 @@ export function startGameWithDeck(
     phase: 'round_end',
     pending: null,
     triple: null,
+    sevenSeat: null,
     actionQueue: [],
     players,
     discard: [],
@@ -199,9 +200,14 @@ function bust(s: PublicState, p: PlayerState, card: Card) {
 function drawFor(s: PublicState, sec: Secrets, seat: number, rng: Rng) {
   const p = player(s, seat);
   const card = takeCard(s, sec, p, rng);
+  // 達成済みの座席は三連の残りを引き切る。バーストせず、置けない札は捨て札へ
+  const achieved = s.sevenSeat === seat;
   if (card.kind === 'number') {
     if (p.cards.some((c) => c.kind === 'number' && c.value === card.value)) {
-      if (p.hasInsurance) {
+      if (achieved) {
+        s.discard.push(card);
+        s.events.push({ type: 'bonus_discard', seat, card });
+      } else if (p.hasInsurance) {
         p.hasInsurance = false;
         s.discard.push(card);
         s.events.push({ type: 'insurance_used', seat, card });
@@ -212,15 +218,22 @@ function drawFor(s: PublicState, sec: Secrets, seat: number, rng: Rng) {
     }
     p.cards.push(card);
     s.events.push({ type: 'draw', seat, card });
-    if (uniqueNumberCount(p.cards) === 7) {
+    if (!achieved && uniqueNumberCount(p.cards) === 7) {
+      s.sevenSeat = seat;
       s.events.push({ type: 'seven', seat });
-      endRound(s, seat);
+      // 三連の途中なら残りを引き切ってから終了する（runAuto が締める）
+      if (!(s.triple && s.triple.seat === seat)) endRound(s);
     }
     return;
   }
   if (card.kind === 'add' || card.kind === 'mul') {
     p.cards.push(card);
     s.events.push({ type: 'draw', seat, card });
+    return;
+  }
+  if (achieved) {
+    s.discard.push(card);
+    s.events.push({ type: 'bonus_discard', seat, card });
     return;
   }
   s.events.push({ type: 'draw', seat, card });
@@ -305,11 +318,11 @@ function applyTimeout(s: PublicState) {
   chooseTarget(s, w.seat, fallbackTarget);
 }
 
-function endRound(s: PublicState, sevenSeat: number | null = null) {
+function endRound(s: PublicState) {
   for (const p of s.players) {
     if (p.status === 'active') {
       p.status = 'stayed';
-      p.roundScore = scoreCards(p.cards, p.seat === sevenSeat);
+      p.roundScore = scoreCards(p.cards, p.seat === s.sevenSeat);
     }
     p.totalScore += p.roundScore;
     s.discard.push(...p.cards);
@@ -351,6 +364,7 @@ function startRound(s: PublicState, sec: Secrets, rng: Rng) {
   s.turnSeat = null;
   s.pending = null;
   s.triple = null;
+  s.sevenSeat = null;
   s.actionQueue = [];
   s.winnerSeats = null;
   runAuto(s, sec, rng);
@@ -361,6 +375,12 @@ function runAuto(s: PublicState, sec: Secrets, rng: Rng) {
   for (let guard = 0; guard < MAX_AUTO_STEPS; guard++) {
     if (s.phase === 'round_end' || s.phase === 'game_end') return;
     if (s.pending) return;
+    // 三連の途中でラッキーセブンを達成していた場合、引き切った（またはバーストで
+    // 三連が消えた）時点でラウンドを締める
+    if (s.sevenSeat !== null && s.triple === null) {
+      endRound(s);
+      continue;
+    }
     if (s.triple) {
       const p = player(s, s.triple.seat);
       if (s.triple.remaining > 0 && p.status === 'active') {

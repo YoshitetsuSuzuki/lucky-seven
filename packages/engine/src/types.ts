@@ -42,6 +42,8 @@ export interface Triple {
 export type GameEvent =
   | { type: 'draw'; seat: number; card: Card }
   | { type: 'bust'; seat: number; card: Card }
+  /** ラッキーセブン達成後の三連で引いた、場に加えられないカード（重複数字・アクション） */
+  | { type: 'bonus_discard'; seat: number; card: Card }
   | { type: 'insurance_used'; seat: number; card: Card }
   | { type: 'stay'; seat: number }
   | { type: 'freeze'; seat: number; targetSeat: number }
@@ -62,6 +64,8 @@ export interface PublicState {
   phase: Phase;
   pending: Pending | null;
   triple: Triple | null;
+  /** ラッキーセブンを達成した座席。未達成は null。ラウンド終了後も表示用に残る */
+  sevenSeat: number | null;
   /** 三連中に引いたアクション、または保険2枚目の譲渡待ち */
   actionQueue: { seat: number; card: Card }[];
   /** 座席順 */

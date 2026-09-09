@@ -119,7 +119,9 @@ describe('レビュー: ランダム全消化ファズ', () => {
             .filter((c): c is Extract<Card, { kind: 'number' }> => c.kind === 'number')
             .map((c) => c.value);
           expect(new Set(nums).size, `${ctx} seed=${seed} 重複数字 seat=${p.seat}`).toBe(nums.length);
-          expect(nums.length, `${ctx} seed=${seed} 7種超え seat=${p.seat}`).toBeLessThanOrEqual(7);
+          // 達成者だけは三連の残りで 8種目以降を持ちうる（達成後は捨てずに場へ加える）
+          const cap = s.sevenSeat === p.seat ? 13 : 7;
+          expect(nums.length, `${ctx} seed=${seed} 7種超え seat=${p.seat}`).toBeLessThanOrEqual(cap);
         }
         if (s.phase === 'turn' && !s.pending) {
           expect(s.turnSeat, `${ctx} seed=${seed} turnSeat`).not.toBeNull();
@@ -212,9 +214,8 @@ describe('レビュー: 得点と達成の細部', () => {
     expect(s.state.players[0].roundScore).toBe(10);
   });
 
-  it('三連の中で7種達成すると即座に全員終了し、残りは引かない', () => {
-    // 座席0 に n1..n4 を積んでから三連で n5,n6,n7 を引かせる
-    // ここでは単純に「7種目で round_end」だけを確認する別ルートを使う
+  it('三連の中で7種達成しても、残り2枚を引き切ってから全員終了する', () => {
+    // 座席1 に n1..n6 を積んでから三連で n7(7種目), n12, n11 を引かせる
     const deck = craftDeck([N(1), N(0), N(2), N(12), N(3), N(11), N(4), N(10), N(5), N(9), N(6), N(8), TRIPLE(), N(7), N(12, 1), N(11, 1)]);
     let { state, secrets } = startGameWithDeck(
       [{ seat: 0, isCpu: false }, { seat: 1, isCpu: false }],
@@ -231,9 +232,10 @@ describe('レビュー: 得点と達成の細部', () => {
     ({ state, secrets } = applyAction(state, secrets, { type: 'hit', seat: 1 }, rng(), NOW));
     expect(state.pending?.type).toBe('triple');
     ({ state, secrets } = applyAction(state, secrets, { type: 'choose_target', seat: 1, targetSeat: 1 }, rng(), NOW));
-    // 1枚目 n7 で7種達成 → 残り2枚は引かない
+    // 1枚目 n7 で7種達成 → 残り2枚(n12, n11)も引き切ってから終了
     expect(state.phase).toBe('round_end');
-    expect(state.players[1].roundScore).toBe(1 + 2 + 3 + 4 + 5 + 6 + 7 + 15);
+    expect(state.sevenSeat).toBe(1);
+    expect(state.players[1].roundScore).toBe(1 + 2 + 3 + 4 + 5 + 6 + 7 + 12 + 11 + 15);
     expect(state.triple).toBeNull();
     expect(state.actionQueue).toEqual([]);
     expect(total(state)).toBe(94);

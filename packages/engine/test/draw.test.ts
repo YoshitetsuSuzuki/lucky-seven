@@ -14,7 +14,7 @@ function state(discard: Card[] = []): PublicState {
   return {
     settings: { turnSeconds: null, endMode: 'points', target: 200 },
     round: 1, dealerSeat: 0, dealSeat: null, turnSeat: 0, phase: 'turn', pending: null, triple: null,
-    actionQueue: [], players: [player()], discard, deckCount: 0, deadline: null, autoAt: null, events: [], winnerSeats: null,
+    sevenSeat: null, actionQueue: [], players: [player()], discard, deckCount: 0, deadline: null, autoAt: null, events: [], winnerSeats: null,
   };
 }
 

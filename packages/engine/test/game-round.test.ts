@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { applyAction, waitingOn } from '../src/game.ts';
-import { N, FREEZE, INSURANCE, start, rng, NOW, SETTINGS } from './helpers.ts';
+import type { Card } from '../src/cards.ts';
+import type { PublicState } from '../src/types.ts';
+import { N, ADD, FREEZE, INSURANCE, TRIPLE, start, rng, NOW, SETTINGS } from './helpers.ts';
+
+const total = (s: PublicState) =>
+  s.deckCount +
+  s.discard.length +
+  s.players.reduce((n, p) => n + p.cards.length, 0) +
+  (s.pending ? 1 : 0) +
+  s.actionQueue.length;
 
 describe('7種達成', () => {
   it('7種揃った瞬間 +15 で全員のラウンド終了', () => {
@@ -16,6 +25,76 @@ describe('7種達成', () => {
     expect(state.players[0].status).toBe('stayed');
     expect(state.players[0].roundScore).toBe(0 + 12 + 11 + 10 + 9 + 8);
     expect(state.events).toContainEqual({ type: 'seven', seat: 1 });
+    expect(state.sevenSeat).toBe(1);
+  });
+});
+
+describe('三連中の7種達成', () => {
+  /** 座席1 に n1..n6（6種）、座席0 に n0,n12,n11,n10,n9,n8 を積み、座席1 が三連を引いて自分を対象にする */
+  const setup = (tripleCards: Card[]) => {
+    const top = [
+      N(1), N(0),
+      N(2), N(12),
+      N(3), N(11),
+      N(4), N(10),
+      N(5), N(9),
+      N(6), N(8),
+      TRIPLE(),
+      ...tripleCards,
+    ];
+    let { state, secrets } = start(top, 2);
+    expect(total(state)).toBe(94);
+    for (let i = 0; i < 5; i++) {
+      ({ state, secrets } = applyAction(state, secrets, { type: 'hit', seat: 1 }, rng(), NOW));
+      ({ state, secrets } = applyAction(state, secrets, { type: 'hit', seat: 0 }, rng(), NOW));
+      expect(total(state)).toBe(94);
+    }
+    expect(state.players[1].cards.filter((c) => c.kind === 'number')).toHaveLength(6);
+    ({ state, secrets } = applyAction(state, secrets, { type: 'hit', seat: 1 }, rng(), NOW));
+    expect(state.pending?.type).toBe('triple');
+    expect(total(state)).toBe(94);
+    return applyAction(state, secrets, { type: 'choose_target', seat: 1, targetSeat: 1 }, rng(), NOW);
+  };
+
+  it('7種目のあとの重複数字は捨て札、修飾は加点、3枚引き切ってから終了', () => {
+    // 三連の3枚: n7(7種目) → n3(重複) → +4
+    const { state } = setup([N(7), N(3, 1), ADD(4)]);
+    const kinds = state.events.map((e) => e.type);
+    expect(kinds).toEqual(['triple', 'draw', 'seven', 'bonus_discard', 'draw', 'round_end']);
+    expect(state.events[3]).toEqual({ type: 'bonus_discard', seat: 1, card: N(3, 1) });
+    expect(state.events[4]).toEqual({ type: 'draw', seat: 1, card: ADD(4) });
+    // 重複でバーストせず、n7 と +4 が得点に乗る（重複 n3 は二重計上されない）
+    expect(state.players[1].status).toBe('stayed');
+    expect(state.players[1].roundScore).toBe(1 + 2 + 3 + 4 + 5 + 6 + 7 + 4 + 15);
+    expect(state.players[0].roundScore).toBe(0 + 12 + 11 + 10 + 9 + 8);
+    expect(state.phase).toBe('round_end');
+    expect(state.sevenSeat).toBe(1);
+    expect(state.triple).toBeNull();
+    expect(state.actionQueue).toEqual([]);
+    expect(state.discard.map((c) => c.id)).toContain('n3-1');
+    expect(total(state)).toBe(94);
+  });
+
+  it('7種目のあとのアクションは捨て札、8種目の数字は場に加わり加点される', () => {
+    // 三連の3枚: n7(7種目) → 氷結(捨て札) → n8(8種目)
+    const { state } = setup([N(7), FREEZE(), N(8, 1)]);
+    const kinds = state.events.map((e) => e.type);
+    expect(kinds).toEqual(['triple', 'draw', 'seven', 'bonus_discard', 'draw', 'round_end']);
+    expect(state.events[3]).toEqual({ type: 'bonus_discard', seat: 1, card: FREEZE() });
+    expect(state.events).not.toContainEqual({ type: 'freeze', seat: 1, targetSeat: 1 });
+    expect(state.pending).toBeNull();
+    expect(state.actionQueue).toEqual([]);
+    expect(state.players[1].roundScore).toBe(1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 15);
+    expect(state.phase).toBe('round_end');
+    expect(state.discard.map((c) => c.id)).toContain('a-freeze-0');
+    expect(total(state)).toBe(94);
+  });
+
+  it('次のラウンドで sevenSeat がリセットされる', () => {
+    const { state, secrets } = setup([N(7), N(3, 1), ADD(4)]);
+    expect(state.sevenSeat).toBe(1);
+    const next = applyAction(state, secrets, { type: 'next_round' }, rng(), NOW);
+    expect(next.state.sevenSeat).toBeNull();
   });
 });
 
