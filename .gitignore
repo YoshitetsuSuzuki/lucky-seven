@@ -4,3 +4,9 @@ dist
 .env.local
 supabase/.temp
 supabase/functions/_shared/engine
+
+# Capacitor / iOS
+build/
+DerivedData/
+ios/App/Pods/
+ios/App/App/public/

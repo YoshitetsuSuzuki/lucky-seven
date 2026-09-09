@@ -10,9 +10,24 @@
     "dev": "npm run dev -w @lucky7/web",
     "build": "npm run build -w @lucky7/web",
     "sync-engine": "bash scripts/sync-engine.sh",
-    "deploy:act": "npm run sync-engine && npx supabase functions deploy act --no-verify-jwt"
+    "deploy:act": "npm run sync-engine && npx supabase functions deploy act --no-verify-jwt",
+    "build:native": "VITE_BASE=/ npm run build -w @lucky7/web",
+    "ios:sync": "npm run build:native && npx cap sync ios",
+    "ios:open": "npx cap open ios"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.1",
     "deno": "^2.9.6"
+  },
+  "dependencies": {
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
+    "@capacitor/core": "^8.5.1",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.5.1",
+    "@capacitor/share": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3"
   }
 }
