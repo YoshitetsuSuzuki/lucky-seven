@@ -319,5 +319,73 @@ async function toggleLucky(sb: SupabaseClient, room: RoomRow, me: PlayerRow) {
   return { lucky };
 }
 
-// Task 12 で実装
-async function gameAction(_sb: SupabaseClient, _code: string, _me: PlayerRow, _action: string, _payload: Record<string, unknown>): Promise<Record<string, unknown>> { throw new ApiError('未実装'); }
+// ---------- game ----------
+
+async function saveGame(sb: SupabaseClient, room: RoomRow, state: PublicState, deck: Card[]): Promise<boolean> {
+  const status = state.phase === 'game_end' ? 'finished' : 'playing';
+  const { data, error } = await sb
+    .from('rooms')
+    .update({ state, status, version: room.version + 1, updated_at: new Date().toISOString() })
+    .eq('id', room.id)
+    .eq('version', room.version)
+    .select('id');
+  if (error) throw error;
+  if (!data || data.length === 0) return false;
+  const { error: e2 } = await sb.from('room_secrets').update({ deck }).eq('room_id', room.id);
+  if (e2) throw e2;
+  return true;
+}
+
+function buildAction(
+  state: PublicState,
+  players: PlayerRow[],
+  me: PlayerRow,
+  room: RoomRow,
+  action: string,
+  payload: Record<string, unknown>,
+  now: number,
+): Action | null {
+  if (action === 'tick') {
+    const w = waitingOn(state);
+    if (!w) return null;
+    const waiting = players.find((p) => p.seat === w.seat);
+    if (waiting?.is_cpu) {
+      return state.autoAt !== null && state.autoAt <= now ? cpuDecide(state, w.seat) : null;
+    }
+    return state.deadline !== null && state.deadline <= now ? { type: 'timeout' } : null;
+  }
+  if (action === 'next_round') {
+    requireHost(room, me);
+    return { type: 'next_round' };
+  }
+  if (me.seat === null) throw new ApiError('観戦中は操作できません');
+  if (action === 'hit' || action === 'stay') return { type: action, seat: me.seat };
+  if (action === 'choose_target') {
+    const targetSeat = Number(payload.targetSeat);
+    if (!Number.isInteger(targetSeat)) throw new ApiError('対象が不正です');
+    return { type: 'choose_target', seat: me.seat, targetSeat };
+  }
+  throw new ApiError('不明な操作です');
+}
+
+async function gameAction(
+  sb: SupabaseClient,
+  code: string,
+  me: PlayerRow,
+  action: string,
+  payload: Record<string, unknown>,
+) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const room = await loadRoom(sb, code);
+    if (room.status !== 'playing' || !room.state) throw new ApiError('ゲーム中ではありません');
+    const players = await loadPlayers(sb, room.id);
+    const secretsRow = await loadSecrets(sb, room.id);
+    const secrets: Secrets = { deck: secretsRow.deck, luckySeats: luckySeats(secretsRow, players) };
+    const now = Date.now();
+    const engineAction = buildAction(room.state, players, me, room, action, payload, now);
+    if (!engineAction) return { noop: true };
+    const result = applyAction(room.state, secrets, engineAction, randomRng(), now);
+    if (await saveGame(sb, room, result.state, result.secrets.deck)) return {};
+  }
+  throw new ApiError('混み合っています。もう一度お試しください');
+}
