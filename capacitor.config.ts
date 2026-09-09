@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'ラッキーセブン',
   webDir: 'apps/web/dist',
   ios: {
-    contentInset: 'automatic',
+    contentInset: 'never',
     // 注: WKWebView のカスタム URL スキームは ASCII のみ有効なため、この値は
     //     Capacitor 側で無視され、実際のオリジンは capacitor://localhost になる。
     //     （実機/シミュレータで確認済み。クラッシュはしない）
