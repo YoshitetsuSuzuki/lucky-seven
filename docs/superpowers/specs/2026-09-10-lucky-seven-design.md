@@ -131,17 +131,21 @@
 **公開ゲーム状態 `rooms.state`**（エンジンの `PublicState` 型）
 ```
 {
+  settings: { turnSeconds: 20|60|null, endMode: 'points'|'rounds', target: number },
   round: number,
   dealerSeat: number,
+  dealSeat: number | null,        // 配布中に次に配る座席
   turnSeat: number | null,
-  phase: 'dealing' | 'turn' | 'choose_target' | 'round_end' | 'game_end',
-  pending: { type: 'freeze'|'triple'|'give_insurance', bySeat, remainingDraws?: number, queue: Card[] } | null,
-  players: { [seat]: { status: 'active'|'stayed'|'busted', cards: Card[], hasInsurance: boolean, roundScore: number, totalScore: number } },
+  phase: 'dealing' | 'turn' | 'round_end' | 'game_end',
+  pending: { type: 'freeze'|'triple'|'give_insurance', bySeat: number, card: Card } | null,
+  triple: { seat: number, remaining: number } | null,
+  actionQueue: { seat: number, card: Card }[],   // 三連中に引いたアクション等
+  players: { seat, isCpu, status: 'active'|'stayed'|'busted', cards: Card[], hasInsurance, roundScore, totalScore }[],
+  discard: Card[],
   deckCount: number,
-  discardCount: number,
-  deadline: string | null,   // 手番締切 ISO
-  autoAt: string | null,     // CPU 自動進行時刻 ISO
-  lastEvent: { type, seat, card?, targetSeat? } | null,  // 演出用
+  deadline: number | null,   // 手番締切 epoch ms
+  autoAt: number | null,     // CPU 自動進行時刻 epoch ms
+  events: GameEvent[],       // 直近の操作で起きたこと（演出用）
   winnerSeats: number[] | null
 }
 ```
@@ -193,8 +197,8 @@
 ## 8. テスト
 
 - **エンジン（Vitest）**: 山札 94 枚の構成、シャッフル決定性（seed）、バースト、保険による回避、2 枚目の保険譲渡、氷結、三連（途中バースト・中のアクション後処理・入れ子）、7 種達成の即終了と +15、得点計算（×2 と修飾の順序）、山札切れの再構成、時間切れの自動降り、CPU 判断の境界、ラッキーモードの引き。
-- **Edge Function**: ローカル Supabase で create → join → start → hit/stay の結合テスト（最低限）。
-- **クライアント**: 主要コンポーネントのレンダリングテスト（React Testing Library）。
+- **Edge Function**: ローカル Supabase（Docker）がある場合は create → join → start → hit/stay を curl で通す。
+- **クライアント**: 自動テストは持たず、実装計画の各タスクにある手動確認手順（2ブラウザ＋CPU）で検証する。
 
 ## 9. 公開・運用
 
