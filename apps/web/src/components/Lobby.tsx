@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { Settings } from '@lucky7/engine';
 import type { ScreenProps } from '../hooks/useRoom';
 import { useAct } from '../hooks/useAct';
+import { formatCode } from '../lib/code';
 
 const TURN_OPTIONS: { label: string; value: Settings['turnSeconds'] }[] = [
   { label: '20秒', value: 20 }, { label: '1分', value: 60 }, { label: '無制限', value: null },
@@ -44,7 +45,7 @@ export default function Lobby({ room, players, me, isHost }: ScreenProps) {
         <h1 className="text-2xl font-black">ラッキー<span className="text-amber-400">7</span></h1>
         <div className="text-right">
           <div className="text-xs text-slate-400">ルームコード</div>
-          <div className="font-mono text-2xl tracking-widest text-amber-400">{room.code}</div>
+          <div className="font-mono text-2xl tracking-widest text-amber-400">{formatCode(room.code)}</div>
         </div>
       </header>
 

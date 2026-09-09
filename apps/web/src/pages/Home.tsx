@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { act } from '../lib/api';
+import { normalizeCode } from '../lib/code';
 import { loadName, saveName, saveSession } from '../lib/session';
 
 export default function Home() {
@@ -47,7 +48,6 @@ export default function Home() {
             value={name}
             maxLength={12}
             onChange={(e) => setName(e.target.value)}
-            placeholder="例: よしてつ"
           />
         </label>
         <button
@@ -62,12 +62,15 @@ export default function Home() {
             className="flex-1 rounded-xl bg-slate-800 px-4 py-3 text-lg tracking-widest uppercase outline-none focus:ring-2 ring-amber-400"
             value={code}
             maxLength={6}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="コード"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="one-time-code"
+            onChange={(e) => setCode(normalizeCode(e.target.value))}
+            placeholder="6桁のコード"
           />
           <button
             className="rounded-xl bg-slate-700 px-5 font-bold disabled:opacity-40"
-            disabled={!name.trim() || busy}
+            disabled={!name.trim() || code.length !== 6 || busy}
             onClick={join}
           >
             参加
