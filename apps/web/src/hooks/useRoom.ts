@@ -82,8 +82,10 @@ export function useRoom(code: string) {
 
     const subscribe = (roomId: string) => {
       if (cancelled) return;
+      // トピックは購読ごとに一意にする（同名チャンネルは既存インスタンスが再利用され、
+      // subscribe 済みに .on を足そうとして例外になるため）
       channel = supabase
-        .channel(`room:${roomId}`)
+        .channel(`room:${roomId}:${Math.random().toString(36).slice(2, 8)}`)
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
           setRoom((prev) => {
             const next = payload.new as Partial<RoomRow>;
