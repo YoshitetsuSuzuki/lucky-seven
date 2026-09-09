@@ -89,7 +89,7 @@ export default function RoundEndOverlay({
                 <tbody>
                   {rows.map((p) => (
                     <tr key={p.seat} className="border-t border-white/8">
-                      <td className="max-w-0 truncate py-2 font-bold">{nameOf(p.seat)}</td>
+                      <td className="py-2 pr-3 font-bold truncate max-w-[11rem]">{nameOf(p.seat)}</td>
                       <td className="whitespace-nowrap py-2 text-right text-muted">+{p.roundScore}</td>
                       <td className="py-2 pl-3 text-right font-display text-lg font-extrabold">{p.totalScore}</td>
                     </tr>

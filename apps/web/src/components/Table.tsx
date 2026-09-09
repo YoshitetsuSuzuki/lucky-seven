@@ -28,7 +28,9 @@ export default function Table({
   /** ゲーム終了後、最終結果画面へ進む。undefined ならまだ終了していない */
   onShowResult?: () => void;
 }) {
-  const { busy, error, run } = useAct(room.code);
+  const { busy, error, run, setError } = useAct(room.code);
+  // 卓の状態が進んだら古いエラー表示（手番ずれ等）は消す
+  useEffect(() => { setError(null); }, [room.version, setError]);
   const { lucky, handlers: luckyPress } = useLuckyToggle(room.code, me.id);
   const nameOf = useNameOf(players);
   const state = room.state;
