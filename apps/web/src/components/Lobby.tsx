@@ -3,10 +3,15 @@ import type { ReactNode } from 'react';
 import type { Settings } from '@lucky7/engine';
 import type { ScreenProps } from '../hooks/useRoom';
 import { useAct } from '../hooks/useAct';
+import { useBgm } from '../hooks/useSound';
 import { formatCode } from '../lib/code';
+import SoundToggle from './SoundToggle';
+import { CardBack } from './CardView';
 
 const TURN_OPTIONS: { label: string; value: Settings['turnSeconds'] }[] = [
-  { label: '20秒', value: 20 }, { label: '1分', value: 60 }, { label: '無制限', value: null },
+  { label: '20秒', value: 20 },
+  { label: '1分', value: 60 },
+  { label: '無制限', value: null },
 ];
 const POINT_TARGETS = [100, 200, 300];
 const ROUND_TARGETS = [3, 5, 10];
@@ -16,11 +21,17 @@ function Chip({ active, disabled, onClick, children }: { active: boolean; disabl
     <button
       disabled={disabled}
       onClick={onClick}
-      className={`rounded-full px-4 py-2.5 text-sm font-bold transition ${active ? 'bg-amber-400 text-slate-900' : 'bg-slate-800 text-slate-300'} disabled:opacity-40 disabled:cursor-default`}
+      className={`rounded-full px-4 py-2.5 text-sm font-bold transition active:scale-95 ${
+        active ? 'gold-foil text-[#3a2a06] shadow-[0_8px_20px_-10px_rgba(242,193,78,.9)]' : 'border border-white/10 bg-ink3 text-cream/65'
+      } disabled:cursor-default disabled:opacity-40`}
     >
       {children}
     </button>
   );
+}
+
+function SectionTitle({ children }: { children: ReactNode }) {
+  return <h2 className="mb-2 font-display text-[11px] font-extrabold tracking-[0.28em] text-cream/35">{children}</h2>;
 }
 
 export default function Lobby({ room, players, me, isHost }: ScreenProps) {
@@ -28,6 +39,7 @@ export default function Lobby({ room, players, me, isHost }: ScreenProps) {
   const [copied, setCopied] = useState(false);
   const seated = players.filter((p) => p.seat !== null);
   const url = `${location.origin}${location.pathname}#/r/${room.code}`;
+  useBgm();
 
   const setSettings = (patch: Partial<Settings>) => {
     const next: Settings = { ...room.settings, ...patch };
@@ -35,44 +47,66 @@ export default function Lobby({ room, players, me, isHost }: ScreenProps) {
     void run('update_settings', { settings: next });
   };
   const copy = async () => {
-    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500); }
-    catch { prompt('この URL を共有してください', url); }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      prompt('この URL を共有してください', url);
+    }
   };
 
   return (
-    <div className="min-h-full p-5 max-w-lg mx-auto flex flex-col gap-6">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-black">ラッキー<span className="text-amber-400">7</span></h1>
-        <div className="text-right">
-          <div className="text-xs text-slate-400">ルームコード</div>
-          <div className="font-mono text-2xl tracking-widest text-amber-400">{formatCode(room.code)}</div>
-        </div>
+    <div className="mx-auto flex min-h-full max-w-lg flex-col gap-6 p-5">
+      <header className="flex items-center gap-3">
+        <h1 className="font-display text-2xl font-extrabold tracking-tight">
+          ラッキー<span className="text-gold">7</span>
+        </h1>
+        <SoundToggle className="ml-auto" />
       </header>
 
-      <button onClick={copy} className="rounded-xl bg-slate-800 py-3 font-bold">
-        {copied ? 'コピーしました' : '招待URLをコピー'}
-      </button>
+      <section className="felt flex items-center gap-4 rounded-3xl p-4">
+        <div className="relative shrink-0" style={{ width: 56, height: 78 }}>
+          <CardBack size="md" className="absolute inset-0" style={{ transform: 'rotate(-8deg) translateX(-4px)', opacity: 0.75 }} />
+          <CardBack size="md" className="absolute inset-0" style={{ transform: 'rotate(4deg)' }} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-display text-[10px] font-extrabold tracking-[0.3em] text-cream/45">ルームコード</div>
+          <div className="font-display text-[32px] font-extrabold leading-tight tracking-[0.12em] text-gold [text-shadow:0_2px_16px_rgba(242,193,78,.35)]">
+            {formatCode(room.code)}
+          </div>
+          <button onClick={copy} className="mt-1 rounded-full border border-white/15 bg-black/25 px-3 py-1.5 text-xs font-bold text-cream/80 active:scale-95">
+            {copied ? 'コピーしました' : '招待URLをコピー'}
+          </button>
+        </div>
+      </section>
 
       <section>
-        <h2 className="text-sm text-slate-400 mb-2">参加者 {seated.length}/12</h2>
+        <SectionTitle>参加者 {seated.length}/12</SectionTitle>
         <ul className="space-y-2">
           {players.map((p) => (
-            <li key={p.id} className="flex items-center gap-3 rounded-xl bg-slate-800 px-4 py-3">
-              <span className="font-bold flex-1">
+            <li key={p.id} className="lacquer flex items-center gap-3 rounded-2xl px-4 py-3">
+              <span className="min-w-0 flex-1 truncate font-bold">
                 {p.name}
-                {p.id === room.host_player_id && <span className="ml-2 text-xs text-amber-400">ホスト</span>}
-                {p.id === me.id && <span className="ml-2 text-xs text-slate-400">あなた</span>}
-                {p.seat === null && <span className="ml-2 text-xs text-slate-500">観戦</span>}
+                {p.id === room.host_player_id && <span className="ml-2 text-[11px] font-bold text-gold">ホスト</span>}
+                {p.id === me.id && <span className="ml-2 text-[11px] text-cream/40">あなた</span>}
+                {p.seat === null && <span className="ml-2 text-[11px] text-cream/30">観戦</span>}
               </span>
-              {p.is_cpu && <span className="text-xs rounded bg-slate-700 px-2 py-0.5">CPU</span>}
+              {p.is_cpu && <span className="rounded-full bg-white/6 px-2 py-0.5 text-[10px] font-bold text-cream/55 ring-1 ring-white/10">CPU</span>}
               {p.is_cpu && isHost && (
-                <button disabled={busy} onClick={() => void run('remove_cpu', { playerId: p.id })} className="px-3 py-2 text-slate-400 text-sm">削除</button>
+                <button disabled={busy} onClick={() => void run('remove_cpu', { playerId: p.id })} className="px-2 py-2 text-sm text-muted">
+                  削除
+                </button>
               )}
             </li>
           ))}
         </ul>
         {isHost && (
-          <button disabled={busy || seated.length >= 12} onClick={() => void run('add_cpu')} className="mt-3 w-full rounded-xl border border-slate-700 py-2 text-sm disabled:opacity-40">
+          <button
+            disabled={busy || seated.length >= 12}
+            onClick={() => void run('add_cpu')}
+            className="mt-3 w-full rounded-2xl border border-dashed border-white/15 py-2.5 text-sm text-cream/60 disabled:opacity-40"
+          >
             ＋ CPU を追加
           </button>
         )}
@@ -80,37 +114,50 @@ export default function Lobby({ room, players, me, isHost }: ScreenProps) {
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-sm text-slate-400 mb-2">手番の制限時間</h2>
+          <SectionTitle>手番の制限時間</SectionTitle>
           <div className="flex gap-2">
             {TURN_OPTIONS.map((o) => (
-              <Chip key={String(o.value)} active={room.settings.turnSeconds === o.value} disabled={!isHost || busy} onClick={() => setSettings({ turnSeconds: o.value })}>{o.label}</Chip>
+              <Chip key={String(o.value)} active={room.settings.turnSeconds === o.value} disabled={!isHost || busy} onClick={() => setSettings({ turnSeconds: o.value })}>
+                {o.label}
+              </Chip>
             ))}
           </div>
         </div>
         <div>
-          <h2 className="text-sm text-slate-400 mb-2">終了条件</h2>
-          <div className="flex gap-2 mb-2">
-            <Chip active={room.settings.endMode === 'points'} disabled={!isHost || busy} onClick={() => setSettings({ endMode: 'points' })}>目標点</Chip>
-            <Chip active={room.settings.endMode === 'rounds'} disabled={!isHost || busy} onClick={() => setSettings({ endMode: 'rounds' })}>ラウンド数</Chip>
+          <SectionTitle>終了条件</SectionTitle>
+          <div className="mb-2 flex gap-2">
+            <Chip active={room.settings.endMode === 'points'} disabled={!isHost || busy} onClick={() => setSettings({ endMode: 'points' })}>
+              目標点
+            </Chip>
+            <Chip active={room.settings.endMode === 'rounds'} disabled={!isHost || busy} onClick={() => setSettings({ endMode: 'rounds' })}>
+              ラウンド数
+            </Chip>
           </div>
           <div className="flex gap-2">
             {(room.settings.endMode === 'points' ? POINT_TARGETS : ROUND_TARGETS).map((t) => (
               <Chip key={t} active={room.settings.target === t} disabled={!isHost || busy} onClick={() => setSettings({ target: t })}>
-                {t}{room.settings.endMode === 'points' ? '点' : 'R'}
+                {t}
+                {room.settings.endMode === 'points' ? '点' : 'R'}
               </Chip>
             ))}
           </div>
         </div>
       </section>
 
-      {isHost ? (
-        <button disabled={busy || seated.length < 2} onClick={() => void run('start')} className="rounded-xl bg-amber-400 text-slate-900 font-bold py-4 text-lg disabled:opacity-40">
-          ゲーム開始（{seated.length}人）
-        </button>
-      ) : (
-        <p className="text-center text-slate-400">ホストの開始を待っています…</p>
-      )}
-      {error && <p className="text-rose-400 text-sm text-center">{error}</p>}
+      <div className="mt-auto pt-2">
+        {isHost ? (
+          <button
+            disabled={busy || seated.length < 2}
+            onClick={() => void run('start')}
+            className="gold-foil w-full rounded-2xl py-4 font-display text-lg font-extrabold text-[#3a2a06] shadow-[0_14px_36px_-14px_rgba(242,193,78,.85)] transition active:scale-[.98] disabled:opacity-40"
+          >
+            ゲーム開始（{seated.length}人）
+          </button>
+        ) : (
+          <p className="text-center text-muted">ホストの開始を待っています…</p>
+        )}
+        {error && <p className="mt-2 text-center text-sm text-rose">{error}</p>}
+      </div>
     </div>
   );
 }

@@ -1,48 +1,86 @@
+import { useEffect } from 'react';
 import type { ScreenProps } from '../hooks/useRoom';
 import { useAct } from '../hooks/useAct';
 import { useNameOf } from '../hooks/useNameOf';
 import { useElapsed } from '../hooks/useElapsed';
+import { playSfx } from '../lib/audio';
 import { STALE_MS } from '../lib/stale';
+import SoundToggle from './SoundToggle';
 
 export default function Result({ room, players, me, isHost }: ScreenProps) {
   const { busy, error, run } = useAct(room.code);
   const nameOf = useNameOf(players);
   const elapsed = useElapsed(room.updated_at);
   const state = room.state;
-  if (!state) return <p className="p-6 text-slate-400">状態を読み込み中…</p>;
+  const winners = new Set(state?.winnerSeats ?? []);
+  const iWon = me.seat !== null && winners.has(me.seat);
+
+  useEffect(() => {
+    if (iWon) playSfx('win');
+  }, [iWon]);
+
+  if (!state) return <p className="p-6 text-muted">状態を読み込み中…</p>;
 
   const rows = [...state.players].sort((a, b) => b.totalScore - a.totalScore);
-  const winners = new Set(state.winnerSeats ?? []);
-  const iWon = me.seat !== null && winners.has(me.seat);
   // ホストが離脱しても詰まないよう、30秒経ったら着席者なら誰でも進められる
   const stale = elapsed >= STALE_MS;
   const canStart = isHost || (stale && me.seat !== null);
   const waitSeconds = Math.ceil((STALE_MS - elapsed) / 1000);
 
   return (
-    <div className="min-h-full max-w-lg mx-auto p-5 flex flex-col gap-6">
-      <h1 className="text-3xl font-black text-center">{iWon ? '🎉 勝利！' : 'ゲーム終了'}</h1>
-      <p className="text-center text-amber-400 font-bold">
-        優勝: {[...winners].map(nameOf).join(' / ')}
-      </p>
+    <div className="mx-auto flex min-h-full max-w-lg flex-col gap-6 p-5">
+      <header className="flex items-center justify-end">
+        <SoundToggle />
+      </header>
+
+      <div className="text-center">
+        <p className="font-display text-[11px] font-extrabold tracking-[0.4em] text-gold/60">GAME OVER</p>
+        <h1 className="mt-1 font-display text-4xl font-extrabold tracking-tight">
+          {iWon ? (
+            <span className="text-gold [text-shadow:0_0_28px_rgba(242,193,78,.55)]">勝利</span>
+          ) : (
+            <span>ゲーム終了</span>
+          )}
+        </h1>
+        <p className="mt-2 font-bold text-gold/90">優勝: {[...winners].map(nameOf).join(' / ')}</p>
+      </div>
+
       <ol className="space-y-2">
-        {rows.map((p, i) => (
-          <li key={p.seat} className={`flex items-center gap-3 rounded-xl px-4 py-3 ${winners.has(p.seat) ? 'bg-amber-400 text-slate-900' : 'bg-slate-800'}`}>
-            <span className="w-6 font-black">{i + 1}</span>
-            <span className="flex-1 font-bold">{nameOf(p.seat)}</span>
-            <span className="font-black text-lg">{p.totalScore}</span>
-          </li>
-        ))}
+        {rows.map((p, i) => {
+          const won = winners.has(p.seat);
+          return (
+            <li
+              key={p.seat}
+              className={`animate-riseIn flex items-center gap-3 rounded-2xl px-4 py-3.5 ${
+                won ? 'gold-foil text-[#3a2a06] shadow-[0_14px_34px_-16px_rgba(242,193,78,.9)]' : 'lacquer'
+              }`}
+              style={{ animationDelay: `${i * 55}ms` }}
+            >
+              <span className={`w-6 font-display text-lg font-extrabold ${won ? 'text-[#3a2a06]' : 'text-cream/35'}`}>{i + 1}</span>
+              <span className="min-w-0 flex-1 truncate font-bold">{nameOf(p.seat)}</span>
+              <span className="font-display text-xl font-extrabold">{p.totalScore}</span>
+            </li>
+          );
+        })}
       </ol>
-      {canStart ? (
-        <button disabled={busy} onClick={() => void run('next_game')} className="rounded-xl bg-amber-400 text-slate-900 font-bold py-4 text-lg disabled:opacity-40">もう一回（同じメンバー）</button>
-      ) : (
-        <p className="text-center text-slate-400">
-          ホストの操作を待っています…
-          {me.seat !== null && <span className="block text-xs">あと{waitSeconds}秒で誰でも始められます</span>}
-        </p>
-      )}
-      {error && <p className="text-rose-400 text-sm text-center">{error}</p>}
+
+      <div className="mt-auto pt-2">
+        {canStart ? (
+          <button
+            disabled={busy}
+            onClick={() => void run('next_game')}
+            className="gold-foil w-full rounded-2xl py-4 font-display text-lg font-extrabold text-[#3a2a06] transition active:scale-[.98] disabled:opacity-40"
+          >
+            もう一回（同じメンバー）
+          </button>
+        ) : (
+          <p className="text-center text-muted">
+            ホストの操作を待っています…
+            {me.seat !== null && <span className="block text-xs">あと{waitSeconds}秒で誰でも始められます</span>}
+          </p>
+        )}
+        {error && <p className="mt-2 text-center text-sm text-rose">{error}</p>}
+      </div>
     </div>
   );
 }

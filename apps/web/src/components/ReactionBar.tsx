@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { playSfx, unlock } from '../lib/audio';
 
 const EMOJIS = ['👍', '😱', '🔥', '😂'];
 const NAME_MAX = 12;
@@ -25,6 +26,7 @@ export default function ReactionBar({ code, name }: { code: string; name: string
         x: 10 + Math.random() * 70,
       };
       setFloating((f) => [...f, item]);
+      playSfx('reaction');
       const id = window.setTimeout(() => {
         timers.current = timers.current.filter((t) => t !== id);
         setFloating((f) => f.filter((x) => x.id !== item.id));
@@ -41,21 +43,29 @@ export default function ReactionBar({ code, name }: { code: string; name: string
   }, [code]);
 
   const send = (emoji: string) => {
+    unlock();
     void channel.current?.send({ type: 'broadcast', event: 'reaction', payload: { emoji, name } });
   };
 
   return (
     <>
-      <div className="flex justify-center gap-2">
+      <div className="flex justify-center gap-2.5">
         {EMOJIS.map((e) => (
-          <button key={e} onClick={() => send(e)} className="h-10 w-10 rounded-full bg-slate-800 text-xl active:scale-90 transition">{e}</button>
+          <button
+            key={e}
+            onClick={() => send(e)}
+            aria-label={`リアクション ${e}`}
+            className="h-11 w-11 rounded-full border border-white/10 bg-ink3/80 text-xl backdrop-blur transition active:scale-90"
+          >
+            {e}
+          </button>
         ))}
       </div>
       <div className="pointer-events-none fixed inset-x-0 bottom-28 h-40 z-30">
         {floating.map((f) => (
           <div key={f.id} className="absolute animate-floatUp text-center" style={{ left: `${f.x}%` }}>
             <div className="text-3xl">{f.emoji}</div>
-            <div className="text-[10px] text-slate-300">{f.name}</div>
+            <div className="text-[10px] text-cream/70">{f.name}</div>
           </div>
         ))}
       </div>

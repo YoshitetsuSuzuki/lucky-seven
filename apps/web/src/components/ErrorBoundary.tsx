@@ -20,11 +20,11 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (this.state.message === null) return this.props.children;
     return (
       <div className="min-h-full flex flex-col items-center justify-center gap-4 p-6 text-center">
-        <p className="text-rose-400 font-bold">問題が発生しました</p>
-        <p className="text-sm text-slate-400 break-all">{this.state.message}</p>
+        <p className="font-display text-lg font-extrabold text-rose">問題が発生しました</p>
+        <p className="break-all text-sm text-muted">{this.state.message}</p>
         <button
           onClick={() => location.reload()}
-          className="rounded-xl bg-amber-400 text-slate-900 font-bold px-6 py-3"
+          className="gold-foil rounded-2xl px-6 py-3 font-display font-extrabold text-[#3a2a06]"
         >
           再読み込み
         </button>

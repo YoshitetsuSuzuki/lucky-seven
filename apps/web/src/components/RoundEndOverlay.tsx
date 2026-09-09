@@ -3,10 +3,21 @@ import { useElapsed } from '../hooks/useElapsed';
 import { STALE_MS } from '../lib/stale';
 
 export default function RoundEndOverlay({
-  state, nameOf, isHost, seated, busy, updatedAt, onNext,
+  state,
+  nameOf,
+  isHost,
+  seated,
+  busy,
+  updatedAt,
+  onNext,
 }: {
-  state: PublicState; nameOf: (seat: number) => string; isHost: boolean; seated: boolean; busy: boolean;
-  updatedAt: string; onNext: () => void;
+  state: PublicState;
+  nameOf: (seat: number) => string;
+  isHost: boolean;
+  seated: boolean;
+  busy: boolean;
+  updatedAt: string;
+  onNext: () => void;
 }) {
   const elapsed = useElapsed(updatedAt);
   const rows = [...state.players].sort((a, b) => b.totalScore - a.totalScore);
@@ -15,25 +26,45 @@ export default function RoundEndOverlay({
   const canNext = isHost || (seated && elapsed >= STALE_MS);
   const waitSeconds = Math.ceil((STALE_MS - elapsed) / 1000);
   return (
-    <div className="fixed inset-0 z-20 bg-black/70 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="round-end-title">
-      <div className="w-full max-w-sm rounded-2xl bg-slate-800 p-5 space-y-4">
-        <h2 id="round-end-title" className="text-xl font-black text-center">ラウンド {state.round} 終了</h2>
-        {sevenSeat !== undefined && <p className="text-center text-amber-400 font-bold">{nameOf(sevenSeat)} がラッキーセブン達成！ +15</p>}
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="round-end-title"
+    >
+      <div className="lacquer animate-riseIn w-full max-w-sm space-y-4 rounded-3xl p-5 shadow-[0_30px_70px_-24px_rgba(0,0,0,.95)]">
+        <div className="text-center">
+          <p className="font-display text-[11px] font-extrabold tracking-[0.4em] text-gold/60">ROUND {state.round}</p>
+          <h2 id="round-end-title" className="mt-0.5 font-display text-2xl font-extrabold">
+            ラウンド終了
+          </h2>
+        </div>
+        {sevenSeat !== undefined && (
+          <p className="rounded-2xl border border-gold/30 bg-gold/10 px-3 py-2 text-center text-sm font-bold text-gold">
+            {nameOf(sevenSeat)} がラッキーセブン達成！ <span className="font-display">+15</span>
+          </p>
+        )}
         <table className="w-full text-sm">
           <tbody>
             {rows.map((p) => (
-              <tr key={p.seat} className="border-t border-slate-700">
-                <td className="py-2 font-bold">{nameOf(p.seat)}</td>
-                <td className="py-2 text-right text-slate-400">+{p.roundScore}</td>
-                <td className="py-2 text-right font-black text-lg">{p.totalScore}</td>
+              <tr key={p.seat} className="border-t border-white/8">
+                <td className="max-w-0 truncate py-2 font-bold">{nameOf(p.seat)}</td>
+                <td className="whitespace-nowrap py-2 text-right text-muted">+{p.roundScore}</td>
+                <td className="py-2 pl-3 text-right font-display text-lg font-extrabold">{p.totalScore}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {canNext ? (
-          <button disabled={busy} onClick={onNext} className="w-full rounded-xl bg-amber-400 text-slate-900 font-bold py-3 disabled:opacity-40">次のラウンドへ</button>
+          <button
+            disabled={busy}
+            onClick={onNext}
+            className="gold-foil w-full rounded-2xl py-3.5 font-display text-lg font-extrabold text-[#3a2a06] transition active:scale-[.98] disabled:opacity-40"
+          >
+            次のラウンドへ
+          </button>
         ) : (
-          <p className="text-center text-slate-400 text-sm">
+          <p className="text-center text-sm text-muted">
             ホストが次へ進めます…
             {seated && <span className="block text-xs">あと{waitSeconds}秒で誰でも進められます</span>}
           </p>

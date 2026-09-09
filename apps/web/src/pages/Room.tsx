@@ -67,13 +67,13 @@ export default function Room() {
   if (error) {
     return (
       <div className="min-h-full flex flex-col items-center justify-center gap-4 p-6">
-        <p className="text-rose-400">{error}</p>
-        <button onClick={() => { void refresh(); }} className="rounded-xl bg-slate-800 px-5 py-2 font-bold">再試行</button>
-        <Link className="underline" to="/">ホームへ</Link>
+        <p className="text-rose">{error}</p>
+        <button onClick={() => { void refresh(); }} className="lacquer rounded-2xl px-5 py-2.5 font-bold">再試行</button>
+        <Link className="text-sm text-muted underline" to="/">ホームへ</Link>
       </div>
     );
   }
-  if (loading || !room || !checked) return <div className="p-6 text-slate-400">読み込み中…</div>;
+  if (loading || !room || !checked) return <div className="p-6 text-muted">読み込み中…</div>;
   if (!session) {
     // JoinForm での参加は成功済みなので、再確認（join の再送）は不要
     return <JoinForm code={code} onJoined={() => { setSession(loadSession(code)); setChecked(true); void refresh(); }} />;
@@ -81,14 +81,14 @@ export default function Room() {
 
   const notice = reconnectError && (
     <div className="flex flex-wrap items-center justify-center gap-3 px-3 py-1.5 text-sm">
-      <span className="text-rose-400">再接続できません：{reconnectError}</span>
-      <button onClick={recheck} className="rounded-full bg-slate-800 px-3 py-2 text-slate-200">再試行</button>
-      <button onClick={rejoin} className="rounded-full bg-slate-800 px-3 py-2 text-slate-200">参加し直す</button>
+      <span className="text-rose">再接続できません：{reconnectError}</span>
+      <button onClick={recheck} className="rounded-full border border-white/10 bg-ink3 px-3 py-2 text-cream/85">再試行</button>
+      <button onClick={rejoin} className="rounded-full border border-white/10 bg-ink3 px-3 py-2 text-cream/85">参加し直す</button>
     </div>
   );
 
   const me = players.find((p) => p.id === session.playerId);
-  if (!me) return <div className="p-6 text-slate-400">{notice}参加処理中…</div>;
+  if (!me) return <div className="p-6 text-muted">{notice}参加処理中…</div>;
   const isHost = room.host_player_id === me.id;
 
   let screen;
