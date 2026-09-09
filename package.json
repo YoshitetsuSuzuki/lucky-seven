@@ -1,11 +1,17 @@
 {
   "name": "lucky-seven",
   "private": true,
-  "workspaces": ["packages/*", "apps/*"],
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
     "test": "npm run test -w @lucky7/engine",
     "dev": "npm run dev -w @lucky7/web",
     "build": "npm run build -w @lucky7/web",
     "sync-engine": "bash scripts/sync-engine.sh"
+  },
+  "devDependencies": {
+    "deno": "^2.9.6"
   }
 }
