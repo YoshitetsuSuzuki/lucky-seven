@@ -3,17 +3,26 @@ import { targetCandidates, waitingOn } from '@lucky7/engine';
 import type { ScreenProps } from './Lobby';
 import { act } from '../lib/api';
 import { useTicker } from '../hooks/useTicker';
+import { useLongPress } from '../hooks/useLongPress';
 import PlayerRow from './PlayerRow';
 import Controls from './Controls';
 import Timer from './Timer';
 import TargetModal from './TargetModal';
 import RoundEndOverlay from './RoundEndOverlay';
 import EventToast from './EventToast';
+import ReactionBar from './ReactionBar';
 
 export default function Table({ room, players, me, isHost }: ScreenProps) {
   const state = room.state!;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lucky, setLucky] = useState(false);
+  const luckyPress = useLongPress(async () => {
+    try {
+      const r = await act('toggle_lucky', { code: room.code });
+      setLucky(Boolean(r.lucky));
+    } catch { /* 静かに無視 */ }
+  });
   const mySeat = me.seat;
   const nameOf = useMemo(() => {
     const map = new Map(players.filter((p) => p.seat !== null).map((p) => [p.seat!, p.name]));
@@ -42,7 +51,7 @@ export default function Table({ room, players, me, isHost }: ScreenProps) {
   return (
     <div className="min-h-full max-w-lg mx-auto p-3 pb-32 space-y-2">
       <header className="flex items-center gap-3 px-1 py-2">
-        <h1 className="text-xl font-black">ラッキー<span className="text-amber-400">7</span></h1>
+        <h1 className="text-xl font-black">ラッキー<span className={lucky ? 'text-amber-300' : 'text-amber-400/90'}>7</span></h1>
         <span className="text-sm text-slate-400">R{state.round} ・ 山札 {state.deckCount}</span>
         <span className="ml-auto text-sm text-slate-300">
           {waiting ? (waiting.seat === mySeat ? 'あなたの番' : `${nameOf(waiting.seat)} の番`) : ''}
@@ -60,6 +69,7 @@ export default function Table({ room, players, me, isHost }: ScreenProps) {
           isChoosing={state.pending?.bySeat === p.seat}
           lastCardId={lastCardId}
           shake={bustSeats.has(p.seat)}
+          onNamePress={p.seat === mySeat ? luckyPress : undefined}
         />
       ))}
 
@@ -68,6 +78,7 @@ export default function Table({ room, players, me, isHost }: ScreenProps) {
       <div className="fixed bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent">
         <div className="max-w-lg mx-auto space-y-2">
           {error && <p className="text-rose-400 text-sm text-center">{error}</p>}
+          <ReactionBar code={room.code} name={me.name} />
           {myTurn && <Controls busy={busy} onHit={() => run('hit')} onStay={() => run('stay')} />}
         </div>
       </div>
