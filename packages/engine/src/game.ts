@@ -12,6 +12,7 @@ import {
 } from './types.ts';
 
 export const CPU_DELAY_MS = 1500;
+export const MAX_AUTO_STEPS = 2000;
 
 export interface SeatInput {
   seat: number;
@@ -28,7 +29,7 @@ export function startGame(
   return startGameWithDeck(seats, settings, shuffle(buildDeck(), rng), now, rng, luckySeats);
 }
 
-/** テスト用: 山札の並びを指定して開始 */
+/** 山札の並びを指定して開始（テスト・再現用） */
 export function startGameWithDeck(
   seats: SeatInput[],
   settings: Settings,
@@ -50,8 +51,11 @@ export function startGameWithDeck(
       roundScore: 0,
       totalScore: 0,
     }));
+  if (new Set(players.map((p) => p.seat)).size !== players.length) {
+    throw new EngineError('座席番号が重複しています');
+  }
   const state: PublicState = {
-    settings,
+    settings: { ...settings },
     round: 0,
     dealerSeat: players[players.length - 1].seat,
     dealSeat: null,
@@ -296,8 +300,9 @@ function applyTimeout(s: PublicState) {
     return;
   }
   const candidates = targetCandidates(s);
-  const self = candidates.includes(w.seat) ? w.seat : candidates[0];
-  chooseTarget(s, w.seat, self);
+  const fallbackTarget = candidates.includes(w.seat) ? w.seat : candidates[0];
+  if (fallbackTarget === undefined) throw new EngineError('対象候補がいません');
+  chooseTarget(s, w.seat, fallbackTarget);
 }
 
 function endRound(s: PublicState, sevenSeat: number | null = null) {
@@ -309,6 +314,7 @@ function endRound(s: PublicState, sevenSeat: number | null = null) {
     p.totalScore += p.roundScore;
     s.discard.push(...p.cards);
     p.cards = [];
+    p.hasInsurance = false;
   }
   if (s.pending) s.discard.push(s.pending.card);
   for (const item of s.actionQueue) s.discard.push(item.card);
@@ -352,7 +358,7 @@ function startRound(s: PublicState, sec: Secrets, rng: Rng) {
 
 /** 入力が必要になるか、ラウンド/ゲームが終わるまで自動で進める */
 function runAuto(s: PublicState, sec: Secrets, rng: Rng) {
-  for (let guard = 0; guard < 2000; guard++) {
+  for (let guard = 0; guard < MAX_AUTO_STEPS; guard++) {
     if (s.phase === 'round_end' || s.phase === 'game_end') return;
     if (s.pending) return;
     if (s.triple) {

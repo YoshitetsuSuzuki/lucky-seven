@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { applyAction, waitingOn } from '../src/game.ts';
-import { N, FREEZE, start, rng, NOW, SETTINGS } from './helpers.ts';
+import { N, FREEZE, INSURANCE, start, rng, NOW, SETTINGS } from './helpers.ts';
 
 describe('7種達成', () => {
   it('7種揃った瞬間 +15 で全員のラウンド終了', () => {
@@ -37,6 +37,15 @@ describe('ラウンド終了と次ラウンド', () => {
   it('round_end 以外で next_round は例外', () => {
     const { state, secrets } = start([N(3), N(5)]);
     expect(() => applyAction(state, secrets, { type: 'next_round' }, rng(), NOW)).toThrow();
+  });
+  it('保険を持ったままラウンドが終わると hasInsurance がリセットされる', () => {
+    const { state, secrets } = start([N(3), N(5), INSURANCE(), N(6), N(7)]);
+    const a = applyAction(state, secrets, { type: 'hit', seat: 1 }, rng(), NOW); // 保険を取得
+    expect(a.state.players[1].hasInsurance).toBe(true);
+    const b = applyAction(a.state, a.secrets, { type: 'stay', seat: 0 }, rng(), NOW);
+    const c = applyAction(b.state, b.secrets, { type: 'stay', seat: 1 }, rng(), NOW);
+    expect(c.state.phase).toBe('round_end');
+    expect(c.state.players[1].hasInsurance).toBe(false);
   });
 });
 

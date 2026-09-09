@@ -14,7 +14,8 @@ export function takeCard(state: PublicState, secrets: Secrets, player: PlayerSta
   if (secrets.luckySeats.includes(player.seat)) {
     const mine = numberValues(player.cards);
     const safe = secrets.deck.findIndex((c) => !(c.kind === 'number' && mine.has(c.value)));
-    if (safe > 0) index = safe;
+    // safe === -1 (安全な札が見つからない) と safe === 0 はどちらも「先頭のまま」でよい
+    index = Math.max(0, safe);
   }
   const card = secrets.deck[index];
   const skipped = secrets.deck.slice(0, index);

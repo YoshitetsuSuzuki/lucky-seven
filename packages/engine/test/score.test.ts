@@ -18,6 +18,9 @@ describe('scoreCards', () => {
   it('7種達成で +15', () => {
     expect(scoreCards([N(0), N(1), N(2), N(3), N(4), N(5), N(6)], true)).toBe(36);
   });
+  it('7種達成 + ×2 はボーナスを2倍しない', () => {
+    expect(scoreCards([N(0), N(1), N(2), N(3), N(4), N(5), N(6), MUL], true)).toBe(57);
+  });
 });
 
 describe('uniqueNumberCount', () => {

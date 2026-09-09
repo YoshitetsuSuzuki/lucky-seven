@@ -27,6 +27,18 @@ function numberCount(p: PlayerState): number {
   return p.cards.filter((c) => c.kind === 'number').length;
 }
 
+/** 引く/降りるの閾値調整。p(バースト確率) < 閾値 なら引く */
+const HIT_THRESHOLDS = {
+  base: 0.3, // 手札点 < 20
+  score20: 0.22, // 手札点 >= 20
+  score30: 0.14, // 手札点 >= 30
+  score40: 0.06, // 手札点 >= 40
+  sixUniqueBonus: 0.2, // 数字6種で達成狙い
+  behindBy: 40, // 首位にこれ以上離されていたら
+  behindBonus: 0.1, //   粘る
+  insuranceBonus: 0.35, // 保険持ち
+} as const;
+
 export function cpuDecide(state: PublicState, seat: number): Action {
   const w = waitingOn(state);
   if (!w || w.seat !== seat) throw new EngineError('CPU の入力待ちではありません');
@@ -44,6 +56,7 @@ export function cpuDecide(state: PublicState, seat: number): Action {
       if (numberCount(me) <= 2 || others.length === 0) target = seat;
       else target = others.reduce((a, b) => (numberCount(a) >= numberCount(b) ? a : b)).seat;
     } else {
+      if (others.length === 0) throw new EngineError('対象候補がいません');
       target = others.reduce((a, b) => (currentScore(a) <= currentScore(b) ? a : b)).seat;
     }
     return { type: 'choose_target', seat, targetSeat: target };
@@ -53,13 +66,13 @@ export function cpuDecide(state: PublicState, seat: number): Action {
   if (uniq === 0) return { type: 'hit', seat };
   const p = bustProbability(state, seat);
   const rs = currentScore(me);
-  let t = 0.3;
-  if (rs >= 20) t = 0.22;
-  if (rs >= 30) t = 0.14;
-  if (rs >= 40) t = 0.06;
-  if (uniq === 6) t += 0.2;
+  let t: number = HIT_THRESHOLDS.base;
+  if (rs >= 20) t = HIT_THRESHOLDS.score20;
+  if (rs >= 30) t = HIT_THRESHOLDS.score30;
+  if (rs >= 40) t = HIT_THRESHOLDS.score40;
+  if (uniq === 6) t += HIT_THRESHOLDS.sixUniqueBonus;
   const leader = Math.max(0, ...state.players.filter((o) => o.seat !== seat).map((o) => o.totalScore));
-  if (me.totalScore + rs < leader - 40) t += 0.1;
-  if (me.hasInsurance) t += 0.35;
+  if (me.totalScore + rs < leader - HIT_THRESHOLDS.behindBy) t += HIT_THRESHOLDS.behindBonus;
+  if (me.hasInsurance) t += HIT_THRESHOLDS.insuranceBonus;
   return p < t ? { type: 'hit', seat } : { type: 'stay', seat };
 }

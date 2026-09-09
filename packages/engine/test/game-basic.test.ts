@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { applyAction, waitingOn, startGame } from '../src/game.ts';
-import { N, ADD, INSURANCE, start, SETTINGS, NOW, rng } from './helpers.ts';
+import { applyAction, waitingOn, startGame, startGameWithDeck } from '../src/game.ts';
+import { N, ADD, INSURANCE, start, craftDeck, SETTINGS, NOW, rng } from './helpers.ts';
 import { EngineError } from '../src/types.ts';
 
 describe('startGame / 配布', () => {
@@ -29,6 +29,38 @@ describe('startGame / 配布', () => {
   it('無制限設定なら deadline は null', () => {
     const { state } = start([N(3), N(5)], 2, { ...SETTINGS, turnSeconds: null });
     expect(state.deadline).toBeNull();
+  });
+  it('13人は例外', () => {
+    const seats = Array.from({ length: 13 }, (_, i) => ({ seat: i, isCpu: false }));
+    expect(() => startGame(seats, SETTINGS, rng(), NOW)).toThrow(EngineError);
+  });
+  it('座席番号が重複していると例外', () => {
+    const seats = [
+      { seat: 0, isCpu: false },
+      { seat: 0, isCpu: false },
+    ];
+    expect(() => startGame(seats, SETTINGS, rng(), NOW)).toThrow(EngineError);
+  });
+});
+
+describe('不変性', () => {
+  it('applyAction は state/secrets 引数を変更しない', () => {
+    const { state, secrets } = start([N(3), N(5), N(8)]);
+    const stateBefore = JSON.stringify(state);
+    const secretsBefore = JSON.stringify(secrets);
+    applyAction(state, secrets, { type: 'hit', seat: 1 }, rng(), NOW);
+    expect(JSON.stringify(state)).toBe(stateBefore);
+    expect(JSON.stringify(secrets)).toBe(secretsBefore);
+  });
+  it('startGameWithDeck は渡した deck 配列を変更しない', () => {
+    const seats = [
+      { seat: 0, isCpu: false },
+      { seat: 1, isCpu: false },
+    ];
+    const deck = craftDeck([N(3), N(5)]);
+    const deckBefore = JSON.stringify(deck);
+    startGameWithDeck(seats, SETTINGS, deck, NOW);
+    expect(JSON.stringify(deck)).toBe(deckBefore);
   });
 });
 

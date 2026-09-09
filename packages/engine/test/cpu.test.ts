@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { applyAction } from '../src/game.ts';
 import { bustProbability, cpuDecide } from '../src/cpu.ts';
+import { EngineError } from '../src/types.ts';
 import { N, ADD, FREEZE, TRIPLE, INSURANCE, start, rng, NOW } from './helpers.ts';
 
 describe('bustProbability', () => {
@@ -12,6 +13,10 @@ describe('bustProbability', () => {
     // 座席1 が 12 を持つ。12 は全12枚中1枚が見えている → 残り11枚 / 山札92枚
     const { state } = start([N(12), N(5)]);
     expect(bustProbability(state, 1)).toBeCloseTo(11 / 92);
+  });
+  it('存在しない座席は例外', () => {
+    const { state } = start([N(12), N(5)]);
+    expect(() => bustProbability(state, 99)).toThrow(EngineError);
   });
 });
 

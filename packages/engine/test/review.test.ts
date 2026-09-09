@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { applyAction, startGame, startGameWithDeck, waitingOn, targetCandidates } from '../src/game.ts';
 import { cpuDecide } from '../src/cpu.ts';
-import { buildDeck, mulberry32 } from '../src/cards.ts';
+import { mulberry32 } from '../src/cards.ts';
+import type { Card } from '../src/cards.ts';
 import type { Action, PublicState, Secrets, Settings } from '../src/types.ts';
 import { N, ADD, MUL, FREEZE, TRIPLE, INSURANCE, start, rng, NOW, SETTINGS, craftDeck } from './helpers.ts';
 
@@ -114,7 +115,9 @@ describe('レビュー: ランダム全消化ファズ', () => {
         expect(total(s), `${ctx} seed=${seed} 保存則`).toBe(94);
         expect(s.deckCount, `${ctx} seed=${seed} deckCount`).toBe(sec.deck.length);
         for (const p of s.players) {
-          const nums = p.cards.filter((c) => c.kind === 'number').map((c) => (c as any).value);
+          const nums = p.cards
+            .filter((c): c is Extract<Card, { kind: 'number' }> => c.kind === 'number')
+            .map((c) => c.value);
           expect(new Set(nums).size, `${ctx} seed=${seed} 重複数字 seat=${p.seat}`).toBe(nums.length);
           expect(nums.length, `${ctx} seed=${seed} 7種超え seat=${p.seat}`).toBeLessThanOrEqual(7);
         }
@@ -160,12 +163,25 @@ describe('レビュー: ランダム全消化ファズ', () => {
 });
 
 describe('レビュー: 山札切れ', () => {
-  it('多人数で山札を使い切っても再構成で継続できる', () => {
-    // 12人がひたすら引く
+  it('12人が引き続けても保存則と再構成が保たれる', () => {
+    // 12人。座席 i に数字 i (i=0..11) を配布し、直後に同じ数字をもう1枚ずつ
+    // 11枚積んで座席0〜10を即バーストさせる（山札はこれで使い切る）。
+    // 生き残った座席11は捨て札からの再構成（シャッフル）を経由して引き続ける。
     const seats = Array.from({ length: 12 }, (_, i) => ({ seat: i, isCpu: false }));
-    let { state, secrets } = startGameWithDeck(seats, SETTINGS, buildDeck(), NOW);
+    const deck: Card[] = [
+      ...Array.from({ length: 12 }, (_, v) => N(v, 0)),
+      ...Array.from({ length: 11 }, (_, v) => N(v, 1)),
+    ];
+    let { state, secrets } = startGameWithDeck(seats, SETTINGS, deck, NOW);
+    const totalOf = (s: PublicState) =>
+      s.deckCount +
+      s.discard.length +
+      s.players.reduce((n, p) => n + p.cards.length, 0) +
+      (s.pending ? 1 : 0) +
+      s.actionQueue.length;
     let steps = 0;
-    let minDeck = 94;
+    let sawZero = false;
+    let reshuffled = false;
     while (state.phase === 'turn' && steps++ < 3000) {
       const w = waitingOn(state)!;
       const action: Action =
@@ -175,12 +191,13 @@ describe('レビュー: 山札切れ', () => {
       const next = applyAction(state, secrets, action, mulberry32(steps), NOW);
       state = next.state;
       secrets = next.secrets;
-      minDeck = Math.min(minDeck, state.deckCount);
-      expect(total(state)).toBe(94);
+      if (state.deckCount === 0) sawZero = true;
+      else if (sawZero && state.deckCount > 0) reshuffled = true;
+      expect(totalOf(state)).toBe(deck.length);
     }
     expect(steps).toBeLessThan(3000);
-    // eslint-disable-next-line no-console
-    console.log('最小 deckCount =', minDeck, 'phase =', state.phase);
+    expect(sawZero, '途中で deckCount === 0 を観測すること').toBe(true);
+    expect(reshuffled, 'deckCount === 0 の後に再構成で増えること').toBe(true);
   });
 });
 
@@ -197,10 +214,6 @@ describe('レビュー: 得点と達成の細部', () => {
 
   it('三連の中で7種達成すると即座に全員終了し、残りは引かない', () => {
     // 座席0 に n1..n4 を積んでから三連で n5,n6,n7 を引かせる
-    const top = [
-      N(1), N(2, 1), // 配布: 座席1=n1, 座席0=n2
-      N(3, 1), N(4, 1), // 座席1 hit=n3, 座席0 hit=n4  ... 順に積む
-    ];
     // ここでは単純に「7種目で round_end」だけを確認する別ルートを使う
     const deck = craftDeck([N(1), N(0), N(2), N(12), N(3), N(11), N(4), N(10), N(5), N(9), N(6), N(8), TRIPLE(), N(7), N(12, 1), N(11, 1)]);
     let { state, secrets } = startGameWithDeck(

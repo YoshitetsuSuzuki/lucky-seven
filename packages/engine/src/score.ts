@@ -2,16 +2,14 @@ import type { Card } from './cards.ts';
 
 export const SEVEN_BONUS = 15;
 
-export function uniqueNumberCount(cards: readonly Card[]): number {
-  const values = new Set<number>();
-  for (const c of cards) if (c.kind === 'number') values.add(c.value);
-  return values.size;
-}
-
 export function numberValues(cards: readonly Card[]): Set<number> {
   const values = new Set<number>();
   for (const c of cards) if (c.kind === 'number') values.add(c.value);
   return values;
+}
+
+export function uniqueNumberCount(cards: readonly Card[]): number {
+  return numberValues(cards).size;
 }
 
 export function scoreCards(cards: readonly Card[], seven: boolean): number {
