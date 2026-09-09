@@ -168,6 +168,8 @@
 | toggle_lucky | 本人 | ラッキーモード切替 |
 | next_game | ホスト | 同じメンバーで新ゲーム（観戦者を席に入れる） |
 
+`next_round` / `next_game` はホスト専用だが、卓が30秒以上更新されていなければ人間の着席プレイヤー誰でも実行できる（ホスト離脱対策）。
+
 処理は「rooms 行を `FOR UPDATE` でロック → secrets 読込 → エンジンで新状態計算 → rooms/secrets 更新」を 1 トランザクションで行う（Postgres 関数経由、または Edge Function 内で楽観ロック `updated_at` 比較）。
 
 ### 5.5 配信

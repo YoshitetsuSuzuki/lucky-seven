@@ -13,9 +13,12 @@ import {
 } from '../_shared/engine/index.ts';
 
 export class ApiError extends Error {
-  constructor(message: string) {
+  /** クライアントが分岐に使う機械可読なコード（例: AUTH_INVALID） */
+  code?: string;
+  constructor(message: string, code?: string) {
     super(message);
     this.name = 'ApiError';
+    this.code = code;
   }
 }
 
@@ -35,6 +38,7 @@ interface RoomRow {
   settings: Settings;
   state: PublicState | null;
   version: number;
+  updated_at: string;
 }
 
 interface PlayerRow {
@@ -61,6 +65,9 @@ const CODE_ATTEMPTS = 5;
 const SEAT_RETRIES = 3;
 const COMMIT_RETRIES = 3;
 const NAME_MAX = 12;
+/** ホスト不在とみなすまでの卓の無更新時間 */
+const STALE_MS = 30_000;
+const AUTH_INVALID = 'AUTH_INVALID';
 
 function db(): SupabaseClient {
   const url = Deno.env.get('SUPABASE_URL');
@@ -119,16 +126,32 @@ async function authPlayer(
   playerId: string | undefined,
   token: string | undefined,
 ): Promise<PlayerRow> {
-  if (!playerId || !token) throw new ApiError('参加情報がありません');
+  if (!playerId || !token) throw new ApiError('参加情報がありません', AUTH_INVALID);
   const { data: t } = await sb.from('player_tokens').select('token').eq('player_id', playerId).maybeSingle();
-  if (!t || t.token !== token) throw new ApiError('参加情報が無効です');
+  if (!t || t.token !== token) throw new ApiError('参加情報が無効です', AUTH_INVALID);
   const { data: p } = await sb.from('players').select('id, room_id, name, seat, is_cpu').eq('id', playerId).maybeSingle();
-  if (!p || p.room_id !== room.id) throw new ApiError('このルームの参加者ではありません');
+  if (!p || p.room_id !== room.id) throw new ApiError('このルームの参加者ではありません', AUTH_INVALID);
   return p as PlayerRow;
 }
 
 function requireHost(room: RoomRow, me: PlayerRow) {
   if (room.host_player_id !== me.id) throw new ApiError('ホストのみ操作できます');
+}
+
+/** 卓が STALE_MS 以上更新されていないか（ホスト離脱で進行が止まった状態） */
+function isStale(room: RoomRow, now: number): boolean {
+  const updated = new Date(room.updated_at).getTime();
+  return Number.isFinite(updated) && now - updated > STALE_MS;
+}
+
+/**
+ * ホストなら常に許可。ホストが離脱して卓が STALE_MS 以上止まっている場合は、
+ * 人間の着席プレイヤーなら誰でも進行できる（ホスト不在で詰むのを防ぐ）。
+ */
+function requireHostOrStale(room: RoomRow, me: PlayerRow) {
+  if (room.host_player_id === me.id) return;
+  if (!me.is_cpu && me.seat !== null && isStale(room, Date.now())) return;
+  throw new ApiError('ホストのみ操作できます');
 }
 
 /** 空いている座席のうち最小のもの（0..MAX_PLAYERS-1、穴があれば埋める）。満員なら null（＝観戦） */
@@ -365,7 +388,7 @@ async function startRoom(sb: SupabaseClient, room: RoomRow, me: PlayerRow) {
 }
 
 async function nextGame(sb: SupabaseClient, room: RoomRow, me: PlayerRow) {
-  requireHost(room, me);
+  requireHostOrStale(room, me);
   if (room.status !== 'finished') throw new ApiError('ゲーム終了後のみ再開できます');
   const players = await loadPlayers(sb, room.id);
   // 観戦者に空席を割り当てる。この関数は status === 'finished' のときにしか呼ばれず、
@@ -415,7 +438,7 @@ function buildAction(
     return state.deadline !== null && state.deadline <= now ? { type: 'timeout' } : null;
   }
   if (action === 'next_round') {
-    requireHost(room, me);
+    requireHostOrStale(room, me);
     return { type: 'next_round' };
   }
   if (me.seat === null) throw new ApiError('観戦中は操作できません');

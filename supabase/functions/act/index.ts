@@ -29,7 +29,10 @@ Deno.serve(async (req) => {
     const result = await handle(body as ActRequest);
     return json({ ok: true, ...result });
   } catch (e) {
-    if (e instanceof EngineError || e instanceof ApiError) return json({ ok: false, error: e.message }, 400);
+    if (e instanceof EngineError || e instanceof ApiError) {
+      const code = e instanceof ApiError ? e.code : undefined;
+      return json(code ? { ok: false, error: e.message, code } : { ok: false, error: e.message }, 400);
+    }
     console.error(e);
     return json({ ok: false, error: 'サーバーエラー' }, 500);
   }
