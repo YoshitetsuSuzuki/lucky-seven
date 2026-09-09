@@ -4,3 +4,5 @@
 
 html, body, #root { height: 100%; }
 body { -webkit-tap-highlight-color: transparent; user-select: none; }
+/* iOS で入力欄のテキスト選択・カーソル操作ができるようにする */
+input, textarea { -webkit-user-select: text; user-select: text; }

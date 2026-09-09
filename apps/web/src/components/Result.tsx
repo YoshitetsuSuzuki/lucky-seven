@@ -1,26 +1,23 @@
-import { useMemo, useState } from 'react';
-import type { ScreenProps } from './Lobby';
-import { act } from '../lib/api';
+import type { ScreenProps } from '../hooks/useRoom';
+import { useAct } from '../hooks/useAct';
+import { useNameOf } from '../hooks/useNameOf';
+import { useElapsed } from '../hooks/useElapsed';
+import { STALE_MS } from '../lib/stale';
 
 export default function Result({ room, players, me, isHost }: ScreenProps) {
-  const state = room.state!;
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const nameOf = useMemo(() => {
-    const map = new Map(players.filter((p) => p.seat !== null).map((p) => [p.seat!, p.name]));
-    return (seat: number) => map.get(seat) ?? `座席${seat}`;
-  }, [players]);
+  const { busy, error, run } = useAct(room.code);
+  const nameOf = useNameOf(players);
+  const elapsed = useElapsed(room.updated_at);
+  const state = room.state;
+  if (!state) return <p className="p-6 text-slate-400">状態を読み込み中…</p>;
+
   const rows = [...state.players].sort((a, b) => b.totalScore - a.totalScore);
   const winners = new Set(state.winnerSeats ?? []);
   const iWon = me.seat !== null && winners.has(me.seat);
-
-  const again = async () => {
-    setBusy(true);
-    setError(null);
-    try { await act('next_game', { code: room.code }); }
-    catch (e) { setError((e as Error).message); }
-    finally { setBusy(false); }
-  };
+  // ホストが離脱しても詰まないよう、30秒経ったら着席者なら誰でも進められる
+  const stale = elapsed >= STALE_MS;
+  const canStart = isHost || (stale && me.seat !== null);
+  const waitSeconds = Math.ceil((STALE_MS - elapsed) / 1000);
 
   return (
     <div className="min-h-full max-w-lg mx-auto p-5 flex flex-col gap-6">
@@ -37,10 +34,13 @@ export default function Result({ room, players, me, isHost }: ScreenProps) {
           </li>
         ))}
       </ol>
-      {isHost ? (
-        <button disabled={busy} onClick={again} className="rounded-xl bg-amber-400 text-slate-900 font-bold py-4 text-lg disabled:opacity-40">もう一回（同じメンバー）</button>
+      {canStart ? (
+        <button disabled={busy} onClick={() => void run('next_game')} className="rounded-xl bg-amber-400 text-slate-900 font-bold py-4 text-lg disabled:opacity-40">もう一回（同じメンバー）</button>
       ) : (
-        <p className="text-center text-slate-400">ホストの操作を待っています…</p>
+        <p className="text-center text-slate-400">
+          ホストの操作を待っています…
+          {me.seat !== null && <span className="block text-xs">あと{waitSeconds}秒で誰でも始められます</span>}
+        </p>
       )}
       {error && <p className="text-rose-400 text-sm text-center">{error}</p>}
     </div>

@@ -2,22 +2,42 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 const EMOJIS = ['👍', '😱', '🔥', '😂'];
+const NAME_MAX = 12;
+const FLOAT_MS = 1800;
 interface Floating { id: number; emoji: string; name: string; x: number }
 
 export default function ReactionBar({ code, name }: { code: string; name: string }) {
   const [floating, setFloating] = useState<Floating[]>([]);
   const channel = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const seq = useRef(0);
+  const timers = useRef<number[]>([]);
 
   useEffect(() => {
     const ch = supabase.channel(`room:${code}:reactions`, { config: { broadcast: { self: true } } });
     ch.on('broadcast', { event: 'reaction' }, ({ payload }) => {
-      const item: Floating = { id: seq.current++, emoji: payload.emoji, name: payload.name, x: 10 + Math.random() * 70 };
+      // ブロードキャストは誰でも送れるので、受け取り側で必ず検証する
+      const emoji = String(payload?.emoji ?? '');
+      if (!EMOJIS.includes(emoji)) return;
+      const item: Floating = {
+        id: seq.current++,
+        emoji,
+        name: String(payload?.name ?? '').slice(0, NAME_MAX),
+        x: 10 + Math.random() * 70,
+      };
       setFloating((f) => [...f, item]);
-      setTimeout(() => setFloating((f) => f.filter((x) => x.id !== item.id)), 1800);
+      const id = window.setTimeout(() => {
+        timers.current = timers.current.filter((t) => t !== id);
+        setFloating((f) => f.filter((x) => x.id !== item.id));
+      }, FLOAT_MS);
+      timers.current.push(id);
     }).subscribe();
     channel.current = ch;
-    return () => { void supabase.removeChannel(ch); channel.current = null; };
+    return () => {
+      timers.current.forEach((t) => window.clearTimeout(t));
+      timers.current = [];
+      void supabase.removeChannel(ch);
+      channel.current = null;
+    };
   }, [code]);
 
   const send = (emoji: string) => {

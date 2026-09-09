@@ -2,14 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useRoom } from '../hooks/useRoom';
 import { clearSession, loadSession } from '../lib/session';
-import { act } from '../lib/api';
+import { ActError, act } from '../lib/api';
 import JoinForm from '../components/JoinForm';
 import Lobby from '../components/Lobby';
 import Table from '../components/Table';
 import Result from '../components/Result';
-
-/** サーバー側 authPlayer が返す「セッションが本当に無効」なメッセージ */
-const AUTH_ERRORS = ['参加情報がありません', '参加情報が無効です', 'このルームの参加者ではありません'];
 
 export default function Room() {
   const code = (useParams().code ?? '').toUpperCase();
@@ -19,16 +16,20 @@ export default function Room() {
   const [reconnectError, setReconnectError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
 
-  // code が変わったらセッションと確認状態をやり直す
-  useEffect(() => {
+  // code が変わったらセッションと確認状態をやり直す（描画中リセット：effect にすると
+  // 初回マウントでも走ってしまい join が二重に飛ぶ）
+  const [sessionCode, setSessionCode] = useState(code);
+  if (sessionCode !== code) {
+    setSessionCode(code);
     setSession(loadSession(code));
     setChecked(false);
-  }, [code]);
+  }
 
   // 保存済みセッションの有効性確認（再接続）。
   // 通信エラーなど一時的な失敗ではセッションを消さない。
   useEffect(() => {
     if (!session) { setChecked(true); return; }
+    if (checked) return;
     let cancelled = false;
     act('join', { code })
       .then(() => {
@@ -38,18 +39,17 @@ export default function Room() {
       })
       .catch((e: unknown) => {
         if (cancelled) return;
-        const msg = e instanceof Error ? e.message : String(e);
-        if (AUTH_ERRORS.includes(msg)) {
+        if (e instanceof ActError && e.code === 'AUTH_INVALID') {
           clearSession(code);
           setSession(null);
           setReconnectError(null);
         } else {
-          setReconnectError(msg || '接続に失敗しました');
+          setReconnectError(e instanceof Error ? e.message : String(e));
         }
         setChecked(true);
       });
     return () => { cancelled = true; };
-  }, [code, session, retry]);
+  }, [code, session, checked, retry]);
 
   const recheck = useCallback(() => {
     setReconnectError(null);
@@ -57,23 +57,33 @@ export default function Room() {
     setRetry((n) => n + 1);
   }, []);
 
+  const rejoin = useCallback(() => {
+    clearSession(code);
+    setSession(null);
+    setReconnectError(null);
+    setChecked(true);
+  }, [code]);
+
   if (error) {
     return (
       <div className="min-h-full flex flex-col items-center justify-center gap-4 p-6">
         <p className="text-rose-400">{error}</p>
+        <button onClick={() => { void refresh(); }} className="rounded-xl bg-slate-800 px-5 py-2 font-bold">再試行</button>
         <Link className="underline" to="/">ホームへ</Link>
       </div>
     );
   }
   if (loading || !room || !checked) return <div className="p-6 text-slate-400">読み込み中…</div>;
   if (!session) {
-    return <JoinForm code={code} onJoined={() => { setSession(loadSession(code)); void refresh(); }} />;
+    // JoinForm での参加は成功済みなので、再確認（join の再送）は不要
+    return <JoinForm code={code} onJoined={() => { setSession(loadSession(code)); setChecked(true); void refresh(); }} />;
   }
 
   const notice = reconnectError && (
-    <div className="flex items-center justify-center gap-3 px-3 py-1.5 text-sm">
+    <div className="flex flex-wrap items-center justify-center gap-3 px-3 py-1.5 text-sm">
       <span className="text-rose-400">再接続できません：{reconnectError}</span>
-      <button onClick={recheck} className="rounded-full bg-slate-800 px-3 py-1 text-slate-200">再試行</button>
+      <button onClick={recheck} className="rounded-full bg-slate-800 px-3 py-2 text-slate-200">再試行</button>
+      <button onClick={rejoin} className="rounded-full bg-slate-800 px-3 py-2 text-slate-200">参加し直す</button>
     </div>
   );
 

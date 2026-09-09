@@ -13,10 +13,13 @@ export default function JoinForm({ code, onJoined }: { code: string; onJoined: (
     try {
       saveName(name);
       const r = await act('join', { code, payload: { name }, anonymous: true });
-      saveSession(code, { playerId: r.playerId as string, token: r.token as string });
+      if (typeof r.playerId !== 'string' || typeof r.token !== 'string') {
+        throw new Error('サーバー応答が不正です');
+      }
+      saveSession(code, { playerId: r.playerId, token: r.token });
       onJoined();
     } catch (e) {
-      setError((e as Error).message);
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }

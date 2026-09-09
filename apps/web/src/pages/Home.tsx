@@ -16,10 +16,13 @@ export default function Home() {
     try {
       saveName(name);
       const r = await act('create', { payload: { name }, anonymous: true });
-      saveSession(r.code as string, { playerId: r.playerId as string, token: r.token as string });
+      if (typeof r.code !== 'string' || typeof r.playerId !== 'string' || typeof r.token !== 'string') {
+        throw new Error('サーバー応答が不正です');
+      }
+      saveSession(r.code, { playerId: r.playerId, token: r.token });
       nav(`/r/${r.code}`);
     } catch (e) {
-      setError((e as Error).message);
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }

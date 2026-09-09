@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
+import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
 
 const root = document.getElementById('root')!;
@@ -12,13 +13,19 @@ async function bootstrap() {
     const { default: App } = await import('./App');
     ReactDOM.createRoot(root).render(
       <React.StrictMode>
-        <HashRouter>
-          <App />
-        </HashRouter>
+        <ErrorBoundary>
+          <HashRouter>
+            <App />
+          </HashRouter>
+        </ErrorBoundary>
       </React.StrictMode>,
     );
   } catch (e) {
-    root.textContent = e instanceof Error ? e.message : String(e);
+    console.error(e);
+    const box = document.createElement('div');
+    box.className = 'p-6 text-rose-400';
+    box.textContent = e instanceof Error ? e.message : String(e);
+    root.replaceChildren(box);
   }
 }
 

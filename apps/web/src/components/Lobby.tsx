@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Settings } from '@lucky7/engine';
-import type { PlayerRow, RoomRow } from '../hooks/useRoom';
-import { act } from '../lib/api';
-
-export interface ScreenProps { room: RoomRow; players: PlayerRow[]; me: PlayerRow; isHost: boolean }
+import type { ScreenProps } from '../hooks/useRoom';
+import { useAct } from '../hooks/useAct';
 
 const TURN_OPTIONS: { label: string; value: Settings['turnSeconds'] }[] = [
   { label: '20秒', value: 20 }, { label: '1分', value: 60 }, { label: '無制限', value: null },
@@ -17,7 +15,7 @@ function Chip({ active, disabled, onClick, children }: { active: boolean; disabl
     <button
       disabled={disabled}
       onClick={onClick}
-      className={`rounded-full px-4 py-2 text-sm font-bold transition ${active ? 'bg-amber-400 text-slate-900' : 'bg-slate-800 text-slate-300'} disabled:opacity-40 disabled:cursor-default`}
+      className={`rounded-full px-4 py-2.5 text-sm font-bold transition ${active ? 'bg-amber-400 text-slate-900' : 'bg-slate-800 text-slate-300'} disabled:opacity-40 disabled:cursor-default`}
     >
       {children}
     </button>
@@ -25,19 +23,11 @@ function Chip({ active, disabled, onClick, children }: { active: boolean; disabl
 }
 
 export default function Lobby({ room, players, me, isHost }: ScreenProps) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { busy, error, run } = useAct(room.code);
   const [copied, setCopied] = useState(false);
   const seated = players.filter((p) => p.seat !== null);
   const url = `${location.origin}${location.pathname}#/r/${room.code}`;
 
-  const run = async (action: string, payload?: Record<string, unknown>) => {
-    setBusy(true);
-    setError(null);
-    try { await act(action, { code: room.code, payload }); }
-    catch (e) { setError((e as Error).message); }
-    finally { setBusy(false); }
-  };
   const setSettings = (patch: Partial<Settings>) => {
     const next: Settings = { ...room.settings, ...patch };
     if (patch.endMode && patch.endMode !== room.settings.endMode) next.target = patch.endMode === 'points' ? 200 : 5;
@@ -75,13 +65,13 @@ export default function Lobby({ room, players, me, isHost }: ScreenProps) {
               </span>
               {p.is_cpu && <span className="text-xs rounded bg-slate-700 px-2 py-0.5">CPU</span>}
               {p.is_cpu && isHost && (
-                <button disabled={busy} onClick={() => run('remove_cpu', { playerId: p.id })} className="text-slate-400 text-sm">削除</button>
+                <button disabled={busy} onClick={() => void run('remove_cpu', { playerId: p.id })} className="px-3 py-2 text-slate-400 text-sm">削除</button>
               )}
             </li>
           ))}
         </ul>
         {isHost && (
-          <button disabled={busy || seated.length >= 12} onClick={() => run('add_cpu')} className="mt-3 w-full rounded-xl border border-slate-700 py-2 text-sm disabled:opacity-40">
+          <button disabled={busy || seated.length >= 12} onClick={() => void run('add_cpu')} className="mt-3 w-full rounded-xl border border-slate-700 py-2 text-sm disabled:opacity-40">
             ＋ CPU を追加
           </button>
         )}
@@ -113,7 +103,7 @@ export default function Lobby({ room, players, me, isHost }: ScreenProps) {
       </section>
 
       {isHost ? (
-        <button disabled={busy || seated.length < 2} onClick={() => run('start')} className="rounded-xl bg-amber-400 text-slate-900 font-bold py-4 text-lg disabled:opacity-40">
+        <button disabled={busy || seated.length < 2} onClick={() => void run('start')} className="rounded-xl bg-amber-400 text-slate-900 font-bold py-4 text-lg disabled:opacity-40">
           ゲーム開始（{seated.length}人）
         </button>
       ) : (

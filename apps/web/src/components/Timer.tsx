@@ -12,7 +12,7 @@ export default function Timer({ deadline, total }: { deadline: number | null; to
   const ratio = Math.max(0, Math.min(1, (deadline - now) / (total * 1000)));
   const r = 14, c = 2 * Math.PI * r;
   return (
-    <svg width="36" height="36" viewBox="0 0 36 36" className="shrink-0">
+    <svg width="36" height="36" viewBox="0 0 36 36" className="shrink-0" role="timer" aria-label={`残り${remain}秒`}>
       <circle cx="18" cy="18" r={r} stroke="#334155" strokeWidth="4" fill="none" />
       <circle cx="18" cy="18" r={r} stroke={remain <= 5 ? '#f43f5e' : '#fbbf24'} strokeWidth="4" fill="none"
         strokeDasharray={c} strokeDashoffset={c * (1 - ratio)} strokeLinecap="round" transform="rotate(-90 18 18)" />

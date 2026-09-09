@@ -1,10 +1,9 @@
-import { useMemo, useState } from 'react';
 import { targetCandidates, waitingOn } from '@lucky7/engine';
-import type { ScreenProps } from './Lobby';
-import { act } from '../lib/api';
-import { loadLucky, saveLucky } from '../lib/session';
+import type { ScreenProps } from '../hooks/useRoom';
+import { useAct } from '../hooks/useAct';
+import { useNameOf } from '../hooks/useNameOf';
+import { useLuckyToggle } from '../hooks/useLuckyToggle';
 import { useTicker } from '../hooks/useTicker';
-import { useLongPress } from '../hooks/useLongPress';
 import PlayerRow from './PlayerRow';
 import Controls from './Controls';
 import Timer from './Timer';
@@ -14,25 +13,14 @@ import EventToast from './EventToast';
 import ReactionBar from './ReactionBar';
 
 export default function Table({ room, players, me, isHost }: ScreenProps) {
-  const state = room.state!;
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [lucky, setLucky] = useState(() => loadLucky(room.code, me.id));
-  const luckyPress = useLongPress(async () => {
-    try {
-      const r = await act('toggle_lucky', { code: room.code });
-      const on = Boolean(r.lucky);
-      setLucky(on);
-      saveLucky(room.code, me.id, on);
-    } catch { /* 静かに無視 */ }
-  });
+  const { busy, error, run } = useAct(room.code);
+  const { lucky, handlers: luckyPress } = useLuckyToggle(room.code, me.id);
+  const nameOf = useNameOf(players);
+  const state = room.state;
   const mySeat = me.seat;
-  const nameOf = useMemo(() => {
-    const map = new Map(players.filter((p) => p.seat !== null).map((p) => [p.seat!, p.name]));
-    return (seat: number) => map.get(seat) ?? `座席${seat}`;
-  }, [players]);
 
   useTicker(room.code, state, room.status === 'playing');
+  if (!state) return <p className="p-6 text-slate-400">状態を読み込み中…</p>;
 
   const waiting = waitingOn(state);
   const myTurn = mySeat !== null && waiting?.seat === mySeat && waiting.kind === 'turn';
@@ -40,14 +28,6 @@ export default function Table({ room, players, me, isHost }: ScreenProps) {
   const lastDraw = [...state.events].reverse().find((e) => e.type === 'draw');
   const lastCardId = lastDraw && lastDraw.type === 'draw' ? lastDraw.card.id : null;
   const bustSeats = new Set(state.events.filter((e) => e.type === 'bust').map((e) => e.seat));
-
-  const run = async (action: string, payload?: Record<string, unknown>) => {
-    setBusy(true);
-    setError(null);
-    try { await act(action, { code: room.code, payload }); }
-    catch (e) { setError((e as Error).message); }
-    finally { setBusy(false); }
-  };
 
   const ordered = [...state.players].sort((a, b) => (a.seat === mySeat ? -1 : b.seat === mySeat ? 1 : a.seat - b.seat));
 
@@ -85,16 +65,16 @@ export default function Table({ room, players, me, isHost }: ScreenProps) {
         <div className="max-w-lg mx-auto space-y-2">
           {error && <p className="text-rose-400 text-sm text-center">{error}</p>}
           <ReactionBar code={room.code} name={me.name} />
-          {myTurn && <Controls busy={busy} onHit={() => run('hit')} onStay={() => run('stay')} />}
+          {myTurn && <Controls busy={busy} onHit={() => void run('hit')} onStay={() => void run('stay')} />}
         </div>
       </div>
 
       {myChoice && state.pending && mySeat !== null && (
         <TargetModal pending={state.pending} candidates={targetCandidates(state)} nameOf={nameOf} mySeat={mySeat} busy={busy}
-          onChoose={(seat) => run('choose_target', { targetSeat: seat })} />
+          onChoose={(seat) => void run('choose_target', { targetSeat: seat })} />
       )}
       {state.phase === 'round_end' && (
-        <RoundEndOverlay state={state} nameOf={nameOf} isHost={isHost} busy={busy} onNext={() => run('next_round')} />
+        <RoundEndOverlay state={state} nameOf={nameOf} isHost={isHost} seated={mySeat !== null} busy={busy} updatedAt={room.updated_at} onNext={() => void run('next_round')} />
       )}
       <EventToast events={state.events} version={room.version} nameOf={nameOf} />
     </div>

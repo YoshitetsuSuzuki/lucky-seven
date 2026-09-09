@@ -1,18 +1,28 @@
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { loadSession } from './session';
 
 export type ActResult = Record<string, unknown> & { ok: true };
 
-/** FunctionsHttpError の本文（{ok:false,error}）からメッセージを取り出す */
-async function errorMessage(error: Error): Promise<string> {
-  const ctx = (error as { context?: unknown }).context as Response | undefined;
-  if (!ctx || typeof ctx.json !== 'function') return error.message;
+/** サーバーが返すエラー。code は機械可読な分岐用（例: AUTH_INVALID） */
+export class ActError extends Error {
+  code?: string;
+  constructor(message: string, code?: string) {
+    super(message);
+    this.name = 'ActError';
+    this.code = code;
+  }
+}
+
+/** FunctionsHttpError の本文（{ok:false,error,code}）からメッセージとコードを取り出す */
+async function toActError(error: Error): Promise<ActError> {
+  if (!(error instanceof FunctionsHttpError)) return new ActError(error.message);
   try {
-    const body = (await ctx.json()) as { error?: unknown } | null;
-    const msg = body?.error;
-    return typeof msg === 'string' && msg ? msg : error.message;
+    const body = (await error.context.json()) as { error?: unknown; code?: unknown } | null;
+    const msg = typeof body?.error === 'string' && body.error ? body.error : error.message;
+    return new ActError(msg, typeof body?.code === 'string' ? body.code : undefined);
   } catch {
-    return error.message;
+    return new ActError(error.message);
   }
 }
 
@@ -21,10 +31,10 @@ export async function act(
   opts: { code?: string; payload?: Record<string, unknown>; anonymous?: boolean } = {},
 ): Promise<ActResult> {
   const session = opts.code && !opts.anonymous ? loadSession(opts.code) : null;
-  const { data, error } = await supabase.functions.invoke('act', {
+  const { data, error } = await supabase.functions.invoke<{ ok?: boolean; error?: string; code?: string }>('act', {
     body: { action, code: opts.code, playerId: session?.playerId, token: session?.token, payload: opts.payload ?? {} },
   });
-  if (error) throw new Error(await errorMessage(error));
-  if (!data?.ok) throw new Error(data?.error ?? '不明なエラー');
-  return data as ActResult;
+  if (error) throw await toActError(error);
+  if (!data?.ok) throw new ActError(data?.error ?? '不明なエラー', data?.code);
+  return data as unknown as ActResult;
 }
