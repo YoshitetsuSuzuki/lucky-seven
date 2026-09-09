@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import type { Settings } from '@lucky7/engine';
 import type { ScreenProps } from '../hooks/useRoom';
 import { useAct } from '../hooks/useAct';
@@ -16,6 +17,10 @@ const TURN_OPTIONS: { label: string; value: Settings['turnSeconds'] }[] = [
 ];
 const POINT_TARGETS = [100, 200, 300];
 const ROUND_TARGETS = [3, 5, 10];
+
+/** ヘッダーの小さな丸ボタン（遊び方・情報） */
+const ICON_BTN =
+  'flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[15px] font-bold leading-none text-muted transition active:scale-95';
 
 function Chip({ active, disabled, onClick, children }: { active: boolean; disabled: boolean; onClick: () => void; children: ReactNode }) {
   return (
@@ -59,11 +64,17 @@ export default function Lobby({ room, players, me, isHost }: ScreenProps) {
 
   return (
     <div className="mx-auto flex min-h-full max-w-lg flex-col gap-6 p-5">
-      <header className="flex items-center gap-3">
-        <h1 className="font-display text-2xl font-extrabold tracking-tight">
+      <header className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5">
+        <h1 className="mr-auto font-display text-2xl font-extrabold tracking-tight">
           ラッキー<span className="text-gold">7</span>
         </h1>
-        <HomeButton className="ml-auto" />
+        <Link to="/help" aria-label="遊び方" className={ICON_BTN}>
+          <span aria-hidden>？</span>
+        </Link>
+        <Link to="/about" aria-label="設定・情報" className={ICON_BTN}>
+          <span aria-hidden>⚙</span>
+        </Link>
+        <HomeButton />
         <SoundControls />
       </header>
 

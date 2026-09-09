@@ -16,6 +16,7 @@ import RoundEndOverlay from './RoundEndOverlay';
 import ReactionBar from './ReactionBar';
 import SoundControls from './SoundControls';
 import HomeButton from './HomeButton';
+import HelpSheet from './HelpSheet';
 import TablePanel from './TablePanel';
 import FlyingCards from './FlyingCards';
 
@@ -43,6 +44,8 @@ export default function Table({
 
   // ラウンド集計シートの開閉。ラウンドが変わったら必ず開いた状態に戻す
   const [sheetOpen, setSheetOpen] = useState(true);
+  // 「遊び方」は部屋を離れずに全画面シートで開く
+  const [helpOpen, setHelpOpen] = useState(false);
   const round = state?.round ?? 0;
   useEffect(() => { setSheetOpen(true); }, [round]);
 
@@ -97,7 +100,15 @@ export default function Table({
             {waiting ? (waiting.seat === mySeat ? 'あなたの番' : `${nameOf(waiting.seat)} の番`) : ''}
           </span>
           <Timer deadline={state.deadline} total={state.settings.turnSeconds} />
-          <HomeButton inGame={room.status === 'playing'} className="ml-auto" />
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            aria-label="遊び方"
+            className="ml-auto flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[15px] font-bold leading-none text-muted transition active:scale-95"
+          >
+            <span aria-hidden>？</span>
+          </button>
+          <HomeButton inGame={room.status === 'playing'} />
           <SoundControls scope="table" />
         </header>
 
@@ -180,6 +191,7 @@ export default function Table({
           onNext={() => void run('next_round')}
         />
       )}
+      {helpOpen && <HelpSheet onClose={() => setHelpOpen(false)} />}
     </div>
   );
 }

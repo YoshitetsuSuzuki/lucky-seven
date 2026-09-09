@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { act } from '../lib/api';
 import { unlock } from '../lib/audio';
 import { normalizeCode } from '../lib/code';
@@ -108,6 +108,24 @@ export default function Home() {
           </button>
         </div>
         {error && <p className="text-sm text-rose">{error}</p>}
+
+        <div className="flex items-center gap-2 pt-2">
+          <Link
+            to="/help"
+            className="flex min-h-[48px] flex-1 items-center justify-center gap-1.5 rounded-2xl border border-gold/25 bg-gold/[0.07] text-[14px] font-bold text-gold transition active:scale-[.98]"
+          >
+            <span aria-hidden>？</span>
+            遊び方
+          </Link>
+          <Link
+            to="/about"
+            aria-label="設定・情報"
+            className="flex min-h-[48px] shrink-0 items-center gap-1.5 rounded-2xl border border-white/10 bg-ink3/70 px-4 text-[14px] font-bold text-cream/75 transition active:scale-[.98]"
+          >
+            <span aria-hidden>⚙</span>
+            情報
+          </Link>
+        </div>
       </div>
     </div>
   );
