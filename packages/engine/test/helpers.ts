@@ -21,7 +21,13 @@ export const NOW = 1_700_000_000_000;
 export const rng = () => mulberry32(7);
 
 /** 人間 n 人（座席 0..n-1）でゲーム開始。配布は deck の先頭から座席 1,2,...,0(親) の順 */
-export function start(top: Card[], n = 2, settings: Settings = SETTINGS, cpuSeats: number[] = []) {
+export function start(
+  top: Card[],
+  n = 2,
+  settings: Settings = SETTINGS,
+  cpuSeats: number[] = [],
+  luckySeats: number[] = [],
+) {
   const seats = Array.from({ length: n }, (_, i) => ({ seat: i, isCpu: cpuSeats.includes(i) }));
-  return startGameWithDeck(seats, settings, craftDeck(top), NOW);
+  return startGameWithDeck(seats, settings, craftDeck(top), NOW, mulberry32(1), luckySeats);
 }

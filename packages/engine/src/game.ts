@@ -18,8 +18,14 @@ export interface SeatInput {
   isCpu: boolean;
 }
 
-export function startGame(seats: SeatInput[], settings: Settings, rng: Rng, now: number) {
-  return startGameWithDeck(seats, settings, shuffle(buildDeck(), rng), now, rng);
+export function startGame(
+  seats: SeatInput[],
+  settings: Settings,
+  rng: Rng,
+  now: number,
+  luckySeats: number[] = [],
+) {
+  return startGameWithDeck(seats, settings, shuffle(buildDeck(), rng), now, rng, luckySeats);
 }
 
 /** テスト用: 山札の並びを指定して開始 */
@@ -29,6 +35,7 @@ export function startGameWithDeck(
   deck: Card[],
   now: number,
   rng: Rng = mulberry32(1),
+  luckySeats: number[] = [],
 ): { state: PublicState; secrets: Secrets } {
   if (seats.length < 2) throw new EngineError('プレイヤーは2人以上必要です');
   if (seats.length > 12) throw new EngineError('プレイヤーは12人までです');
@@ -61,7 +68,8 @@ export function startGameWithDeck(
     events: [],
     winnerSeats: null,
   };
-  const secrets: Secrets = { deck: [...deck], luckySeats: [] };
+  // 初回配布から効くように、ラッキーモード座席は startRound の前に設定する
+  const secrets: Secrets = { deck: [...deck], luckySeats: [...luckySeats] };
   startRound(state, secrets, rng);
   finish(state, now);
   return { state, secrets };
