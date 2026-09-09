@@ -1,5 +1,16 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { Card, PublicState, Settings } from '../_shared/engine/index.ts';
+import {
+  applyAction,
+  cpuDecide,
+  randomRng,
+  startGame,
+  waitingOn,
+  type Action,
+  type Card,
+  type PublicState,
+  type Secrets,
+  type Settings,
+} from '../_shared/engine/index.ts';
 
 export class ApiError extends Error {
   constructor(message: string) {
@@ -201,11 +212,112 @@ export async function handle(req: ActRequest): Promise<Record<string, unknown>> 
   }
 }
 
-// Task 11 / 12 で実装
-async function addCpu(_sb: SupabaseClient, _room: RoomRow, _me: PlayerRow): Promise<Record<string, unknown>> { throw new ApiError('未実装'); }
-async function removeCpu(_sb: SupabaseClient, _room: RoomRow, _me: PlayerRow, _id: string): Promise<Record<string, unknown>> { throw new ApiError('未実装'); }
-async function updateSettings(_sb: SupabaseClient, _room: RoomRow, _me: PlayerRow, _s: unknown): Promise<Record<string, unknown>> { throw new ApiError('未実装'); }
-async function startRoom(_sb: SupabaseClient, _room: RoomRow, _me: PlayerRow): Promise<Record<string, unknown>> { throw new ApiError('未実装'); }
-async function nextGame(_sb: SupabaseClient, _room: RoomRow, _me: PlayerRow): Promise<Record<string, unknown>> { throw new ApiError('未実装'); }
-async function toggleLucky(_sb: SupabaseClient, _room: RoomRow, _me: PlayerRow): Promise<Record<string, unknown>> { throw new ApiError('未実装'); }
+// ---------- lobby ----------
+
+function validateSettings(raw: unknown): Settings {
+  const s = (raw ?? {}) as Partial<Settings>;
+  const turnSeconds = s.turnSeconds === 20 || s.turnSeconds === 60 ? s.turnSeconds : null;
+  const endMode = s.endMode === 'rounds' ? 'rounds' : 'points';
+  const allowed = endMode === 'points' ? [100, 200, 300] : [3, 5, 10];
+  const target = allowed.includes(Number(s.target)) ? Number(s.target) : allowed[1];
+  return { turnSeconds, endMode, target };
+}
+
+async function saveNewGame(sb: SupabaseClient, room: RoomRow, state: PublicState, deck: Card[]) {
+  const { data, error } = await sb
+    .from('rooms')
+    .update({ state, status: 'playing', version: room.version + 1, updated_at: new Date().toISOString() })
+    .eq('id', room.id)
+    .eq('version', room.version)
+    .select('id');
+  if (error) throw error;
+  if (!data || data.length === 0) throw new ApiError('他の操作と重なりました。もう一度お試しください');
+  const { error: e2 } = await sb.from('room_secrets').update({ deck }).eq('room_id', room.id);
+  if (e2) throw e2;
+}
+
+function luckySeats(secrets: SecretsRow, players: PlayerRow[]): number[] {
+  return players
+    .filter((p) => p.seat !== null && secrets.lucky_player_ids.includes(p.id))
+    .map((p) => p.seat!);
+}
+
+async function launch(sb: SupabaseClient, room: RoomRow, players: PlayerRow[]) {
+  const seated = players.filter((p) => p.seat !== null);
+  if (seated.length < 2) throw new ApiError('2人以上必要です');
+  const secretsRow = await loadSecrets(sb, room.id);
+  const { state, secrets } = startGame(
+    seated.map((p) => ({ seat: p.seat!, isCpu: p.is_cpu })),
+    room.settings,
+    randomRng(),
+    Date.now(),
+  );
+  secrets.luckySeats = luckySeats(secretsRow, players);
+  await saveNewGame(sb, room, state, secrets.deck);
+  return {};
+}
+
+async function addCpu(sb: SupabaseClient, room: RoomRow, me: PlayerRow) {
+  requireHost(room, me);
+  if (room.status !== 'lobby') throw new ApiError('ロビーでのみ追加できます');
+  const players = await loadPlayers(sb, room.id);
+  const seat = nextFreeSeat(players);
+  const cpuCount = players.filter((p) => p.is_cpu).length;
+  const name = CPU_NAMES[cpuCount % CPU_NAMES.length];
+  await insertPlayer(sb, room.id, name, seat, true);
+  return {};
+}
+
+async function removeCpu(sb: SupabaseClient, room: RoomRow, me: PlayerRow, playerId: string) {
+  requireHost(room, me);
+  if (room.status !== 'lobby') throw new ApiError('ロビーでのみ削除できます');
+  const { error } = await sb.from('players').delete().eq('id', playerId).eq('room_id', room.id).eq('is_cpu', true);
+  if (error) throw error;
+  return {};
+}
+
+async function updateSettings(sb: SupabaseClient, room: RoomRow, me: PlayerRow, raw: unknown) {
+  requireHost(room, me);
+  if (room.status !== 'lobby') throw new ApiError('ロビーでのみ変更できます');
+  const settings = validateSettings(raw);
+  const { error } = await sb.from('rooms').update({ settings, updated_at: new Date().toISOString() }).eq('id', room.id);
+  if (error) throw error;
+  return { settings };
+}
+
+async function startRoom(sb: SupabaseClient, room: RoomRow, me: PlayerRow) {
+  requireHost(room, me);
+  if (room.status !== 'lobby') throw new ApiError('すでに開始しています');
+  const players = await loadPlayers(sb, room.id);
+  return launch(sb, room, players);
+}
+
+async function nextGame(sb: SupabaseClient, room: RoomRow, me: PlayerRow) {
+  requireHost(room, me);
+  if (room.status !== 'finished') throw new ApiError('ゲーム終了後のみ再開できます');
+  const players = await loadPlayers(sb, room.id);
+  // 観戦者に空席を割り当てる
+  let next = players.filter((p) => p.seat !== null).length === 0 ? 0 : Math.max(...players.filter((p) => p.seat !== null).map((p) => p.seat!)) + 1;
+  for (const p of players) {
+    if (p.seat !== null) continue;
+    if (players.filter((q) => q.seat !== null).length >= MAX_PLAYERS) break;
+    p.seat = next++;
+    const { error } = await sb.from('players').update({ seat: p.seat }).eq('id', p.id);
+    if (error) throw error;
+  }
+  return launch(sb, room, players);
+}
+
+async function toggleLucky(sb: SupabaseClient, room: RoomRow, me: PlayerRow) {
+  const secrets = await loadSecrets(sb, room.id);
+  const ids = new Set(secrets.lucky_player_ids);
+  const lucky = !ids.has(me.id);
+  if (lucky) ids.add(me.id);
+  else ids.delete(me.id);
+  const { error } = await sb.from('room_secrets').update({ lucky_player_ids: [...ids] }).eq('room_id', room.id);
+  if (error) throw error;
+  return { lucky };
+}
+
+// Task 12 で実装
 async function gameAction(_sb: SupabaseClient, _code: string, _me: PlayerRow, _action: string, _payload: Record<string, unknown>): Promise<Record<string, unknown>> { throw new ApiError('未実装'); }
