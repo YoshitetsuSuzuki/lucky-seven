@@ -185,8 +185,8 @@ function stayPlayer(s: PublicState, seat: number) {
 function bust(s: PublicState, p: PlayerState, card: Card) {
   p.status = 'busted';
   p.roundScore = 0;
-  s.discard.push(...p.cards, card);
-  p.cards = [];
+  // 場札は捨てず、重複した2枚目（末尾）を含めてラウンド終了まで表示したまま残す
+  p.cards.push(card);
   s.events.push({ type: 'bust', seat: p.seat, card });
   if (s.triple && s.triple.seat === p.seat) s.triple = null;
   const kept: typeof s.actionQueue = [];

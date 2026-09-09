@@ -73,6 +73,21 @@ describe('三連', () => {
     expect(b.state.pending).toBeNull();
     expect(b.state.discard).toContainEqual(FREEZE());
   });
+  it('三連中に queued の氷結を抱えたままバーストしても、氷結だけ捨て札へ行き手札は保持される', () => {
+    // 座席0 の三連: 氷結(キューに積まれる) → n5重複でバースト
+    const { state, secrets } = start([N(3), N(5, 0), TRIPLE(), FREEZE(), N(5, 1)], 2);
+    const a = applyAction(state, secrets, { type: 'hit', seat: 1 }, rng(), NOW);
+    const b = applyAction(a.state, a.secrets, { type: 'choose_target', seat: 1, targetSeat: 0 }, rng(), NOW);
+    const p = b.state.players[0];
+    expect(p.status).toBe('busted');
+    expect(p.roundScore).toBe(0);
+    // 場札は捨てられず、重複した2枚目が末尾に残る
+    expect(p.cards).toEqual([N(5, 0), N(5, 1)]);
+    // キューにあった氷結だけが捨て札へ
+    expect(b.state.discard).toContainEqual(FREEZE());
+    expect(b.state.actionQueue).toEqual([]);
+    expect(b.state.pending).toBeNull();
+  });
   it('三連の中の三連（入れ子）', () => {
     const { state, secrets } = start([N(3), N(5), TRIPLE(0), TRIPLE(1), N(8), N(9), N(10), N(11), N(12)], 2);
     const a = applyAction(state, secrets, { type: 'hit', seat: 1 }, rng(), NOW);

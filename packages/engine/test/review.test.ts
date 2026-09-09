@@ -118,7 +118,16 @@ describe('レビュー: ランダム全消化ファズ', () => {
           const nums = p.cards
             .filter((c): c is Extract<Card, { kind: 'number' }> => c.kind === 'number')
             .map((c) => c.value);
-          expect(new Set(nums).size, `${ctx} seed=${seed} 重複数字 seat=${p.seat}`).toBe(nums.length);
+          if (p.status === 'busted' && nums.length > 0) {
+            // バースト後は場札を保持したままにするため、末尾（バースト要因）だけ既出の数字と重複してよい
+            // （ラウンド終了で捨て札へ移ると nums は空になり、この分岐は対象外）
+            expect(nums.length - new Set(nums).size, `${ctx} seed=${seed} 重複数字 seat=${p.seat}`).toBe(1);
+            expect(nums.slice(0, -1), `${ctx} seed=${seed} 重複位置 seat=${p.seat}`).toContain(
+              nums[nums.length - 1],
+            );
+          } else {
+            expect(new Set(nums).size, `${ctx} seed=${seed} 重複数字 seat=${p.seat}`).toBe(nums.length);
+          }
           // 達成者だけは三連の残りで 8種目以降を持ちうる（達成後は捨てずに場へ加える）
           const cap = s.sevenSeat === p.seat ? 13 : 7;
           expect(nums.length, `${ctx} seed=${seed} 7種超え seat=${p.seat}`).toBeLessThanOrEqual(cap);
@@ -165,10 +174,14 @@ describe('レビュー: ランダム全消化ファズ', () => {
 });
 
 describe('レビュー: 山札切れ', () => {
-  it('12人が引き続けても保存則と再構成が保たれる', () => {
-    // 12人。座席 i に数字 i (i=0..11) を配布し、直後に同じ数字をもう1枚ずつ
-    // 11枚積んで座席0〜10を即バーストさせる（山札はこれで使い切る）。
-    // 生き残った座席11は捨て札からの再構成（シャッフル）を経由して引き続ける。
+  it('バースト後の場札はラウンド終了まで手札に残るため、山札切れは次ラウンドの配布で再構成される', () => {
+    // 12人。初期親は座席11だが、開始時に親が1つ進むため round1 の親は座席0、
+    // 配布は座席1から座席0(親)の順（座席 s は数字 (s-1) mod 12 を受け取る）。
+    // 続けて同じ数字をもう1枚ずつ11枚積んで座席1〜11を順に即バーストさせる
+    // （山札はこれで使い切る）。バースト後の場札はラウンド終了まで手札に残る
+    // 新ルールのため、山札・捨て札ともに尽きて、生き残った座席0は「降りる」
+    // しかできない。ラウンド終了で全員の場札が捨て札へ移り、次ラウンドの配布で
+    // 山札切れ→捨て札からの再構成（シャッフル）を経由する。
     const seats = Array.from({ length: 12 }, (_, i) => ({ seat: i, isCpu: false }));
     const deck: Card[] = [
       ...Array.from({ length: 12 }, (_, v) => N(v, 0)),
@@ -181,25 +194,39 @@ describe('レビュー: 山札切れ', () => {
       s.players.reduce((n, p) => n + p.cards.length, 0) +
       (s.pending ? 1 : 0) +
       s.actionQueue.length;
-    let steps = 0;
-    let sawZero = false;
-    let reshuffled = false;
-    while (state.phase === 'turn' && steps++ < 3000) {
-      const w = waitingOn(state)!;
-      const action: Action =
-        w.kind === 'target'
-          ? { type: 'choose_target', seat: w.seat, targetSeat: targetCandidates(state)[0] }
-          : { type: 'hit', seat: w.seat };
-      const next = applyAction(state, secrets, action, mulberry32(steps), NOW);
+    expect(totalOf(state)).toBe(deck.length);
+    expect(state.phase).toBe('turn');
+    expect(state.turnSeat).toBe(1);
+
+    for (let seat = 1; seat <= 11; seat++) {
+      const next = applyAction(state, secrets, { type: 'hit', seat }, mulberry32(seat), NOW);
       state = next.state;
       secrets = next.secrets;
-      if (state.deckCount === 0) sawZero = true;
-      else if (sawZero && state.deckCount > 0) reshuffled = true;
+      expect(state.players[seat].status).toBe('busted');
       expect(totalOf(state)).toBe(deck.length);
     }
-    expect(steps).toBeLessThan(3000);
-    expect(sawZero, '途中で deckCount === 0 を観測すること').toBe(true);
-    expect(reshuffled, 'deckCount === 0 の後に再構成で増えること').toBe(true);
+    // 座席0 だけが現役。山札も捨て札も尽きている（バースト後の場札は手札のまま）
+    expect(state.deckCount).toBe(0);
+    expect(state.discard).toEqual([]);
+    expect(state.turnSeat).toBe(0);
+    expect(() => applyAction(state, secrets, { type: 'hit', seat: 0 }, mulberry32(0), NOW)).toThrow();
+
+    // 座席0 は降りるしかない → 全員終了でラウンド終了、場札が捨て札へ移る
+    let r = applyAction(state, secrets, { type: 'stay', seat: 0 }, mulberry32(12), NOW);
+    state = r.state;
+    secrets = r.secrets;
+    expect(state.phase).toBe('round_end');
+    expect(state.discard).toHaveLength(deck.length);
+    expect(totalOf(state)).toBe(deck.length);
+
+    // 次ラウンドの配布で山札切れ→捨て札からの再構成（シャッフル）が起こる
+    r = applyAction(state, secrets, { type: 'next_round' }, mulberry32(13), NOW);
+    state = r.state;
+    secrets = r.secrets;
+    expect(totalOf(state)).toBe(deck.length);
+    expect(state.phase).toBe('turn');
+    expect(state.deckCount).toBe(deck.length - 12); // 再構成後、12人への配布で消費した残り
+    expect(secrets.deck.length).toBe(state.deckCount);
   });
 });
 

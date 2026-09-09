@@ -98,16 +98,24 @@ describe('hit / stay', () => {
 });
 
 describe('バーストと保険', () => {
-  it('同じ数字でバースト: 得点0・場札は捨て札・ラウンド脱落', () => {
+  it('同じ数字でバースト', () => {
     const { state, secrets } = start([N(3, 0), N(5), N(3, 1)]);
     const r = applyAction(state, secrets, { type: 'hit', seat: 1 }, rng(), NOW);
     const p = r.state.players[1];
     expect(p.status).toBe('busted');
-    expect(p.cards).toEqual([]);
+    // 場札は重複した2枚目を末尾に含めたまま、ラウンド終了まで表示され続ける
+    expect(p.cards).toEqual([N(3, 0), N(3, 1)]);
     expect(p.roundScore).toBe(0);
-    expect(r.state.discard.map((c) => c.id)).toEqual(['n3-0', 'n3-1']);
+    expect(r.state.discard).toEqual([]);
     expect(r.state.events).toContainEqual({ type: 'bust', seat: 1, card: N(3, 1) });
     expect(r.state.turnSeat).toBe(0);
+
+    // ラウンド終了時（残るプレイヤーが降りた時点）で、ようやく捨て札へ移る
+    const b = applyAction(r.state, r.secrets, { type: 'stay', seat: 0 }, rng(), NOW);
+    expect(b.state.phase).toBe('round_end');
+    expect(b.state.players[1].cards).toEqual([]);
+    expect(b.state.discard).toContainEqual(N(3, 0));
+    expect(b.state.discard).toContainEqual(N(3, 1));
   });
   it('保険を引くと保持、カードは捨て札へ', () => {
     const { state, secrets } = start([N(3), N(5), INSURANCE()]);
