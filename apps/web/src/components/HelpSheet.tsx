@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { Card } from '@lucky7/engine';
+import { isNative } from '../lib/platform';
 import CardView from './CardView';
 
 /* ---------- 見本カード（本物の CardView をそのまま挿絵に使う） ---------- */
@@ -232,7 +233,11 @@ export function HelpContent() {
       <Section title="観戦と再接続">
         <p>ゲームの途中で入ってきた人や、席が満員のときの参加者は<b className="text-cream/95">観戦</b>になります。次のゲームから席に着けます。</p>
         <p>
-          通信が切れたりアプリを閉じたりしても、<b className="text-cream/95">同じURL（またはルームコード）をもう一度開けば元の席に戻れます</b>。ホームに戻っても席は残ります。
+          通信が切れたりアプリを閉じたりしても、
+          <b className="text-cream/95">
+            {isNative() ? '同じルームコードで入り直せば元の席に戻れます' : '同じURL（またはルームコード）をもう一度開けば元の席に戻れます'}
+          </b>
+          。ホームに戻っても席は残ります。
         </p>
         <p>
           ホストが戻ってこなくなっても大丈夫です。卓が<b className="text-cream/95">30秒以上進んでいなければ、着席している人なら誰でも</b>「次のラウンドへ」「もう一度」を押して進められます。

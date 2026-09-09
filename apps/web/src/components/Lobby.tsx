@@ -6,6 +6,7 @@ import type { ScreenProps } from '../hooks/useRoom';
 import { useAct } from '../hooks/useAct';
 import { useBgm } from '../hooks/useSound';
 import { formatCode } from '../lib/code';
+import { APP_NAME } from '../version';
 import SoundControls from './SoundControls';
 import HomeButton from './HomeButton';
 import { CardBack } from './CardView';
@@ -17,6 +18,10 @@ const TURN_OPTIONS: { label: string; value: Settings['turnSeconds'] }[] = [
 ];
 const POINT_TARGETS = [100, 200, 300];
 const ROUND_TARGETS = [3, 5, 10];
+
+/** 招待の小ボタン（コピー・共有） */
+const INVITE_BTN =
+  'flex min-h-[34px] items-center rounded-full border border-white/15 bg-black/25 px-3 text-xs font-bold leading-none text-cream/80 transition active:scale-95';
 
 /** ヘッダーの小さな丸ボタン（遊び方・情報） */
 const ICON_BTN =
@@ -43,6 +48,8 @@ function SectionTitle({ children }: { children: ReactNode }) {
 export default function Lobby({ room, players, me, isHost }: ScreenProps) {
   const { busy, error, run } = useAct(room.code);
   const [copied, setCopied] = useState(false);
+  // 端末の共有シート（LINE などへ直接送れる）。無い環境ではコピーだけ出す
+  const [canShare] = useState(() => typeof navigator.share === 'function');
   const seated = players.filter((p) => p.seat !== null);
   const url = `${location.origin}${location.pathname}#/r/${room.code}`;
   useBgm();
@@ -59,6 +66,17 @@ export default function Lobby({ room, players, me, isHost }: ScreenProps) {
       setTimeout(() => setCopied(false), 1500);
     } catch {
       prompt('この URL を共有してください', url);
+    }
+  };
+  const share = async () => {
+    try {
+      await navigator.share({
+        title: APP_NAME,
+        text: `「${APP_NAME}」で対戦しませんか？ ルームコード ${formatCode(room.code)}`,
+        url,
+      });
+    } catch {
+      /* 共有シートを閉じただけ。何も出さない */
     }
   };
 
@@ -88,9 +106,19 @@ export default function Lobby({ room, players, me, isHost }: ScreenProps) {
           <div className="font-display text-[32px] font-extrabold leading-tight tracking-[0.12em] text-gold [text-shadow:0_2px_16px_rgba(242,193,78,.35)]">
             {formatCode(room.code)}
           </div>
-          <button onClick={copy} className="mt-1 rounded-full border border-white/15 bg-black/25 px-3 py-1.5 text-xs font-bold text-cream/80 active:scale-95">
-            {copied ? 'コピーしました' : '招待URLをコピー'}
-          </button>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <button onClick={copy} className={INVITE_BTN}>
+              {copied ? 'コピーしました' : '招待URLをコピー'}
+            </button>
+            {canShare && (
+              <button onClick={() => void share()} className={INVITE_BTN}>
+                <span aria-hidden className="mr-1">
+                  ↗
+                </span>
+                招待を送る
+              </button>
+            )}
+          </div>
         </div>
       </section>
 
