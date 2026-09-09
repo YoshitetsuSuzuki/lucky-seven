@@ -86,8 +86,10 @@ describe('hit / stay', () => {
     expect(b.state.phase).toBe('round_end');
     expect(b.state.players[0].totalScore).toBe(5);
     expect(b.state.players[1].totalScore).toBe(3);
-    expect(b.state.discard).toHaveLength(2);
-    expect(b.state.players[0].cards).toEqual([]);
+    // ラウンド終了直後は最終手札を見せるため、捨て札へはまだ移らない
+    expect(b.state.discard).toHaveLength(0);
+    expect(b.state.players[0].cards).toEqual([N(5)]);
+    expect(b.state.players[1].cards).toEqual([N(3)]);
     expect(waitingOn(b.state)).toBeNull();
   });
   it('修飾カードは場に加わる', () => {
@@ -110,12 +112,18 @@ describe('バーストと保険', () => {
     expect(r.state.events).toContainEqual({ type: 'bust', seat: 1, card: N(3, 1) });
     expect(r.state.turnSeat).toBe(0);
 
-    // ラウンド終了時（残るプレイヤーが降りた時点）で、ようやく捨て札へ移る
+    // ラウンド終了時点ではまだ最終手札として表示されたまま
     const b = applyAction(r.state, r.secrets, { type: 'stay', seat: 0 }, rng(), NOW);
     expect(b.state.phase).toBe('round_end');
-    expect(b.state.players[1].cards).toEqual([]);
-    expect(b.state.discard).toContainEqual(N(3, 0));
-    expect(b.state.discard).toContainEqual(N(3, 1));
+    expect(b.state.players[1].cards).toEqual([N(3, 0), N(3, 1)]);
+    expect(b.state.discard).toEqual([]);
+
+    // 次ラウンド開始時（next_round）で、ようやく捨て札へ移る（座席1 には次ラウンドの新しい札が配られる）
+    const c = applyAction(b.state, b.secrets, { type: 'next_round' }, rng(), NOW);
+    expect(c.state.players[1].cards).not.toContainEqual(N(3, 0));
+    expect(c.state.players[1].cards).not.toContainEqual(N(3, 1));
+    expect(c.state.discard).toContainEqual(N(3, 0));
+    expect(c.state.discard).toContainEqual(N(3, 1));
   });
   it('保険を引くと保持、カードは捨て札へ', () => {
     const { state, secrets } = start([N(3), N(5), INSURANCE()]);

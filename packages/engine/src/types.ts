@@ -52,7 +52,9 @@ export type GameEvent =
   | { type: 'seven'; seat: number }
   | { type: 'round_end'; round: number }
   | { type: 'game_end'; winnerSeats: number[] }
-  | { type: 'timeout'; seat: number };
+  | { type: 'timeout'; seat: number }
+  /** 山札・捨て札が両方尽きて引けず、自動的に降りた */
+  | { type: 'deck_empty'; seat: number };
 
 export interface PublicState {
   settings: Settings;

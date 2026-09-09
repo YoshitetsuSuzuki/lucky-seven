@@ -174,14 +174,15 @@ describe('レビュー: ランダム全消化ファズ', () => {
 });
 
 describe('レビュー: 山札切れ', () => {
-  it('バースト後の場札はラウンド終了まで手札に残るため、山札切れは次ラウンドの配布で再構成される', () => {
+  it('手札は次ラウンド開始まで捨て札に移らないため、山札切れは次ラウンドの配布で再構成される', () => {
     // 12人。初期親は座席11だが、開始時に親が1つ進むため round1 の親は座席0、
     // 配布は座席1から座席0(親)の順（座席 s は数字 (s-1) mod 12 を受け取る）。
     // 続けて同じ数字をもう1枚ずつ11枚積んで座席1〜11を順に即バーストさせる
-    // （山札はこれで使い切る）。バースト後の場札はラウンド終了まで手札に残る
-    // 新ルールのため、山札・捨て札ともに尽きて、生き残った座席0は「降りる」
-    // しかできない。ラウンド終了で全員の場札が捨て札へ移り、次ラウンドの配布で
-    // 山札切れ→捨て札からの再構成（シャッフル）を経由する。
+    // （山札はこれで使い切る）。バースト後も、また降りた後も、場札は次ラウンド
+    // 開始まで手札に残る新ルールのため、山札・捨て札ともに尽きて、生き残った
+    // 座席0 は引こうとしても自動的に降りるしかない。ラウンド終了しても場札は
+    // まだ捨て札へ移らず、次ラウンドの配布で山札切れ→捨て札からの再構成
+    // （シャッフル）を経由する。
     const seats = Array.from({ length: 12 }, (_, i) => ({ seat: i, isCpu: false }));
     const deck: Card[] = [
       ...Array.from({ length: 12 }, (_, v) => N(v, 0)),
@@ -209,14 +210,17 @@ describe('レビュー: 山札切れ', () => {
     expect(state.deckCount).toBe(0);
     expect(state.discard).toEqual([]);
     expect(state.turnSeat).toBe(0);
-    expect(() => applyAction(state, secrets, { type: 'hit', seat: 0 }, mulberry32(0), NOW)).toThrow();
 
-    // 座席0 は降りるしかない → 全員終了でラウンド終了、場札が捨て札へ移る
-    let r = applyAction(state, secrets, { type: 'stay', seat: 0 }, mulberry32(12), NOW);
+    // 座席0 は引こうとしても山札・捨て札が尽きているため自動的に降りる
+    let r = applyAction(state, secrets, { type: 'hit', seat: 0 }, mulberry32(0), NOW);
     state = r.state;
     secrets = r.secrets;
+    expect(state.events).toContainEqual({ type: 'deck_empty', seat: 0 });
+    expect(state.events).toContainEqual({ type: 'stay', seat: 0 });
+    expect(state.players[0].status).toBe('stayed');
+    // それが最後の現役プレイヤーだったため、そのままラウンド終了。場札が捨て札へ移るのは次ラウンド開始時
     expect(state.phase).toBe('round_end');
-    expect(state.discard).toHaveLength(deck.length);
+    expect(state.discard).toEqual([]);
     expect(totalOf(state)).toBe(deck.length);
 
     // 次ラウンドの配布で山札切れ→捨て札からの再構成（シャッフル）が起こる
@@ -227,6 +231,48 @@ describe('レビュー: 山札切れ', () => {
     expect(state.phase).toBe('turn');
     expect(state.deckCount).toBe(deck.length - 12); // 再構成後、12人への配布で消費した残り
     expect(secrets.deck.length).toBe(state.deckCount);
+  });
+
+  it('山札・捨て札が両方尽きた状態で hit すると、行き詰まらず自動的に降りる', () => {
+    // 2人、山札はたった4枚: 配布で座席1→n1, 座席0→n2 の2枚を消費し、残り2枚。
+    // 続けて座席1, 座席0 がそれぞれ1回ずつ hit して残り2枚も引き切ると、
+    // 山札・捨て札とも空になる。この状態で次に hit した人は自動的に降りる。
+    const seats = [
+      { seat: 0, isCpu: false },
+      { seat: 1, isCpu: false },
+    ];
+    const deck: Card[] = [N(1), N(2), N(3), N(4)];
+    let { state, secrets } = startGameWithDeck(seats, SETTINGS, deck, NOW);
+    expect(total(state)).toBe(4);
+    expect(state.phase).toBe('turn');
+    expect(state.turnSeat).toBe(1);
+    expect(state.deckCount).toBe(2);
+
+    let r = applyAction(state, secrets, { type: 'hit', seat: 1 }, mulberry32(1), NOW); // n3
+    state = r.state;
+    secrets = r.secrets;
+    expect(state.turnSeat).toBe(0);
+    expect(state.deckCount).toBe(1);
+
+    r = applyAction(state, secrets, { type: 'hit', seat: 0 }, mulberry32(2), NOW); // n4
+    state = r.state;
+    secrets = r.secrets;
+    expect(state.turnSeat).toBe(1);
+    expect(state.deckCount).toBe(0);
+    expect(state.discard).toEqual([]);
+    expect(total(state)).toBe(4);
+
+    // 山札も捨て札も空。ここで座席1 が hit すると、投げ出さず自動的に降りる
+    r = applyAction(state, secrets, { type: 'hit', seat: 1 }, mulberry32(3), NOW);
+    state = r.state;
+    secrets = r.secrets;
+    expect(state.events).toContainEqual({ type: 'deck_empty', seat: 1 });
+    expect(state.events).toContainEqual({ type: 'stay', seat: 1 });
+    expect(state.players[1].status).toBe('stayed');
+    // 座席0 はまだ現役なので、ラウンドは続く
+    expect(state.phase).toBe('turn');
+    expect(state.turnSeat).toBe(0);
+    expect(total(state)).toBe(4);
   });
 });
 

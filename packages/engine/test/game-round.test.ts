@@ -117,14 +117,34 @@ describe('ラウンド終了と次ラウンド', () => {
     const { state, secrets } = start([N(3), N(5)]);
     expect(() => applyAction(state, secrets, { type: 'next_round' }, rng(), NOW)).toThrow();
   });
-  it('保険を持ったままラウンドが終わると hasInsurance がリセットされる', () => {
+  it('保険を持ったままラウンドが終わっても hasInsurance はバッジ表示のため残り、次ラウンドでリセットされる', () => {
     const { state, secrets } = start([N(3), N(5), INSURANCE(), N(6), N(7)]);
     const a = applyAction(state, secrets, { type: 'hit', seat: 1 }, rng(), NOW); // 保険を取得
     expect(a.state.players[1].hasInsurance).toBe(true);
     const b = applyAction(a.state, a.secrets, { type: 'stay', seat: 0 }, rng(), NOW);
     const c = applyAction(b.state, b.secrets, { type: 'stay', seat: 1 }, rng(), NOW);
     expect(c.state.phase).toBe('round_end');
-    expect(c.state.players[1].hasInsurance).toBe(false);
+    // ラウンド終了直後はバッジ表示のため保険フラグを保持したまま
+    expect(c.state.players[1].hasInsurance).toBe(true);
+    const d = applyAction(c.state, c.secrets, { type: 'next_round' }, rng(), NOW);
+    expect(d.state.players[1].hasInsurance).toBe(false);
+  });
+
+  it('ラウンド終了後も全員の手札が残り、next_round で捨て札へ移る', () => {
+    const { state, secrets } = start([N(3), N(5), N(6), N(7)]);
+    const a = applyAction(state, secrets, { type: 'stay', seat: 1 }, rng(), NOW);
+    const b = applyAction(a.state, a.secrets, { type: 'stay', seat: 0 }, rng(), NOW);
+    expect(b.state.phase).toBe('round_end');
+    // ラウンド終了直後は最終手札として残ったまま、捨て札は増えない
+    expect(b.state.players[1].cards).toEqual([N(3)]);
+    expect(b.state.players[0].cards).toEqual([N(5)]);
+    expect(b.state.discard).toEqual([]);
+    const c = applyAction(b.state, b.secrets, { type: 'next_round' }, rng(), NOW);
+    // 次ラウンド開始で、ようやく手札が捨て札へ移る
+    expect(c.state.players[0].cards).toEqual([N(6)]);
+    expect(c.state.players[1].cards).toEqual([N(7)]);
+    expect(c.state.discard).toContainEqual(N(3));
+    expect(c.state.discard).toContainEqual(N(5));
   });
 });
 

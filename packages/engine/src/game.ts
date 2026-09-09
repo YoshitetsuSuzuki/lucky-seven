@@ -93,7 +93,19 @@ export function applyAction(
   switch (action.type) {
     case 'hit': {
       requireTurn(s, action.seat);
-      drawFor(s, sec, action.seat, rng);
+      try {
+        drawFor(s, sec, action.seat, rng);
+      } catch (err) {
+        // 山札・捨て札が両方尽きて引けない場合は、行き詰まらないよう自動的に降りる
+        if (err instanceof EngineError && err.message === 'カードがありません') {
+          s.events.push({ type: 'deck_empty', seat: action.seat });
+          stayPlayer(s, action.seat);
+          s.events.push({ type: 'stay', seat: action.seat });
+          s.turnSeat = nextActiveSeat(s, action.seat);
+          break;
+        }
+        throw err;
+      }
       if (s.phase === 'turn') s.turnSeat = nextActiveSeat(s, action.seat);
       break;
     }
@@ -325,9 +337,8 @@ function endRound(s: PublicState) {
       p.roundScore = scoreCards(p.cards, p.seat === s.sevenSeat);
     }
     p.totalScore += p.roundScore;
-    s.discard.push(...p.cards);
-    p.cards = [];
-    p.hasInsurance = false;
+    // 場札・保険バッジはラウンド終了後も表示したまま残す。捨て札へ移すのは
+    // 次ラウンド開始時（startRound）。
   }
   if (s.pending) s.discard.push(s.pending.card);
   for (const item of s.actionQueue) s.discard.push(item.card);
@@ -354,6 +365,8 @@ function startRound(s: PublicState, sec: Secrets, rng: Rng) {
   s.round += 1;
   s.dealerSeat = nextSeat(s, s.dealerSeat);
   for (const p of s.players) {
+    // 前ラウンドまで表示したまま残していた場札を、ここでようやく捨て札へ
+    s.discard.push(...p.cards);
     p.status = 'active';
     p.cards = [];
     p.hasInsurance = false;
