@@ -71,6 +71,10 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(14px) scale(.98)' },
           '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
         },
+        sheetUp: {
+          '0%': { transform: 'translateY(100%)' },
+          '100%': { transform: 'translateY(0)' },
+        },
       },
       animation: {
         pop: 'pop 0.28s cubic-bezier(.2,.9,.25,1.2)',
@@ -83,6 +87,7 @@ export default {
         sevenGlow: 'sevenGlow 1.4s ease-in-out 2',
         fadeUp: 'fadeUp 0.3s ease-out',
         riseIn: 'riseIn 0.4s cubic-bezier(.2,.8,.2,1) both',
+        sheetUp: 'sheetUp 0.32s cubic-bezier(.2,.8,.2,1) both',
       },
     },
   },

@@ -7,7 +7,16 @@ import { playSfx } from '../lib/audio';
 import { STALE_MS } from '../lib/stale';
 import SoundToggle from './SoundToggle';
 
-export default function Result({ room, players, me, isHost }: ScreenProps) {
+export default function Result({
+  room,
+  players,
+  me,
+  isHost,
+  onBackToTable,
+}: ScreenProps & {
+  /** 卓（最終手札）に戻る。undefined なら戻り先がない */
+  onBackToTable?: () => void;
+}) {
   const { busy, error, run } = useAct(room.code);
   const nameOf = useNameOf(players);
   const elapsed = useElapsed(room.updated_at);
@@ -64,7 +73,7 @@ export default function Result({ room, players, me, isHost }: ScreenProps) {
         })}
       </ol>
 
-      <div className="mt-auto pt-2">
+      <div className="mt-auto space-y-2 pt-2">
         {canStart ? (
           <button
             disabled={busy}
@@ -78,6 +87,14 @@ export default function Result({ room, players, me, isHost }: ScreenProps) {
             ホストの操作を待っています…
             {me.seat !== null && <span className="block text-xs">あと{waitSeconds}秒で誰でも始められます</span>}
           </p>
+        )}
+        {onBackToTable && (
+          <button
+            onClick={onBackToTable}
+            className="w-full rounded-2xl border border-white/12 bg-ink3 py-3.5 font-bold text-cream/85 transition active:scale-[.98]"
+          >
+            卓に戻る（最終手札を見る）
+          </button>
         )}
         {error && <p className="mt-2 text-center text-sm text-rose">{error}</p>}
       </div>

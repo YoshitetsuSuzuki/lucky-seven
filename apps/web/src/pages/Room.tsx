@@ -15,6 +15,18 @@ export default function Room() {
   const [checked, setChecked] = useState(false);
   const [reconnectError, setReconnectError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
+  // ゲーム終了後、最終結果画面を開いているか（まずは卓で全員の最終手札を見せる）
+  const [showResult, setShowResult] = useState(false);
+
+  const status = room?.status;
+  const round = room?.state?.round;
+  // 新しいゲーム・新しいラウンドが始まったら必ず卓へ戻す
+  useEffect(() => {
+    if (status !== 'finished') setShowResult(false);
+  }, [status]);
+  useEffect(() => {
+    setShowResult(false);
+  }, [round]);
 
   // code が変わったらセッションと確認状態をやり直す（描画中リセット：effect にすると
   // 初回マウントでも走ってしまい join が二重に飛ぶ）
@@ -23,6 +35,7 @@ export default function Room() {
     setSessionCode(code);
     setSession(loadSession(code));
     setChecked(false);
+    setShowResult(false);
   }
 
   // 保存済みセッションの有効性確認（再接続）。
@@ -91,11 +104,34 @@ export default function Room() {
   if (!me) return <div className="p-6 text-muted">{notice}参加処理中…</div>;
   const isHost = room.host_player_id === me.id;
 
+  const finished = room.status === 'finished';
+  const gameEnd = room.state?.phase === 'game_end';
+
   let screen;
-  if (room.status === 'lobby') screen = <Lobby room={room} players={players} me={me} isHost={isHost} />;
-  else if (room.status === 'finished' && room.state?.phase === 'game_end') {
-    screen = <Result room={room} players={players} me={me} isHost={isHost} />;
-  } else screen = <Table room={room} players={players} me={me} isHost={isHost} />;
+  if (room.status === 'lobby') {
+    screen = <Lobby room={room} players={players} me={me} isHost={isHost} />;
+  } else if (finished && (!gameEnd || showResult)) {
+    // 通常は「最終結果を見る」を押したとき。phase がずれている場合の逃げ道も兼ねる
+    screen = (
+      <Result
+        room={room}
+        players={players}
+        me={me}
+        isHost={isHost}
+        onBackToTable={gameEnd ? () => setShowResult(false) : undefined}
+      />
+    );
+  } else {
+    screen = (
+      <Table
+        room={room}
+        players={players}
+        me={me}
+        isHost={isHost}
+        onShowResult={finished && gameEnd ? () => setShowResult(true) : undefined}
+      />
+    );
+  }
 
   return <>{notice}{screen}</>;
 }

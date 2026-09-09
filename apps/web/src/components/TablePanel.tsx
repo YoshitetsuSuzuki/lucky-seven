@@ -11,6 +11,7 @@ export default function TablePanel({
   deckCount,
   discard,
   messages,
+  notice,
   version,
   deckRef,
   discardRef,
@@ -18,6 +19,8 @@ export default function TablePanel({
   deckCount: number;
   discard: Card[];
   messages: string[];
+  /** 消えずに出しっぱなしにする案内（ゲーム終了時など）。実況より優先 */
+  notice?: string | null;
   version: number;
   deckRef: RefObject<HTMLDivElement>;
   discardRef: RefObject<HTMLDivElement>;
@@ -62,7 +65,9 @@ export default function TablePanel({
 
       {/* 実況 */}
       <div className="flex min-w-0 flex-1 flex-col items-center justify-center self-stretch px-1 pb-2 text-center">
-        {shown.length > 0 ? (
+        {notice ? (
+          <p className="animate-fadeUp text-[12px] font-bold leading-snug text-gold [text-shadow:0_1px_6px_rgba(0,0,0,.55)]">{notice}</p>
+        ) : shown.length > 0 ? (
           <div className="space-y-0.5">
             {shown.slice(0, 3).map((m, i) => (
               <p

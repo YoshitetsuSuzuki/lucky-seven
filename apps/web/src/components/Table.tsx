@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { targetCandidates, waitingOn } from '@lucky7/engine';
 import type { ScreenProps } from '../hooks/useRoom';
 import { useAct } from '../hooks/useAct';
@@ -18,7 +18,16 @@ import SoundToggle from './SoundToggle';
 import TablePanel from './TablePanel';
 import FlyingCards from './FlyingCards';
 
-export default function Table({ room, players, me, isHost }: ScreenProps) {
+export default function Table({
+  room,
+  players,
+  me,
+  isHost,
+  onShowResult,
+}: ScreenProps & {
+  /** ゲーム終了後、最終結果画面へ進む。undefined ならまだ終了していない */
+  onShowResult?: () => void;
+}) {
   const { busy, error, run } = useAct(room.code);
   const { lucky, handlers: luckyPress } = useLuckyToggle(room.code, me.id);
   const nameOf = useNameOf(players);
@@ -28,6 +37,11 @@ export default function Table({ room, players, me, isHost }: ScreenProps) {
   const deckRef = useRef<HTMLDivElement>(null);
   const discardRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
+
+  // ラウンド集計シートの開閉。ラウンドが変わったら必ず開いた状態に戻す
+  const [sheetOpen, setSheetOpen] = useState(true);
+  const round = state?.round ?? 0;
+  useEffect(() => { setSheetOpen(true); }, [round]);
 
   useTicker(room.code, state, room.status === 'playing');
   useBgm();
@@ -51,8 +65,13 @@ export default function Table({ room, players, me, isHost }: ScreenProps) {
 
   const ordered = [...state.players].sort((a, b) => (a.seat === mySeat ? -1 : b.seat === mySeat ? 1 : a.seat - b.seat));
 
+  const roundEnd = state.phase === 'round_end';
+  const gameEnd = state.phase === 'game_end';
+  // 下の固定エリアと重ならないだけの余白（集計シートを開いている間は特に深く取る）
+  const bottomPad = roundEnd ? (sheetOpen ? 'pb-[62vh]' : 'pb-36') : 'pb-44';
+
   return (
-    <div className="mx-auto min-h-full max-w-lg px-3 pb-44">
+    <div className={`mx-auto min-h-full max-w-lg px-3 ${bottomPad}`}>
       <div className="sticky top-0 z-20 -mx-3 bg-gradient-to-b from-ink via-ink/94 to-transparent px-3 pb-3 pt-1">
         <header className="flex items-center gap-2.5 px-0.5 pb-1.5">
           <h1 className="font-display text-[19px] font-extrabold tracking-tight">
@@ -80,6 +99,7 @@ export default function Table({ room, players, me, isHost }: ScreenProps) {
           deckCount={state.deckCount}
           discard={state.discard}
           messages={messages}
+          notice={gameEnd ? 'ゲーム終了！ 最終手札を確認してください' : null}
           version={room.version}
           deckRef={deckRef}
           discardRef={discardRef}
@@ -105,16 +125,28 @@ export default function Table({ room, players, me, isHost }: ScreenProps) {
 
       {mySeat === null && <p className="py-3 text-center text-sm text-muted">観戦中（次のゲームから参加できます）</p>}
 
-      <div
-        className="fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-ink via-ink/95 to-transparent p-3"
-        style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
-      >
-        <div className="mx-auto max-w-lg space-y-2">
-          {error && <p className="text-center text-sm text-rose">{error}</p>}
-          <ReactionBar code={room.code} name={me.name} />
-          {myTurn && <Controls busy={busy} onHit={() => void run('hit')} onStay={() => void run('stay')} />}
+      {/* ラウンド集計中は下部シートに任せ、この固定バーは出さない（重なり防止） */}
+      {!roundEnd && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-ink via-ink/95 to-transparent p-3"
+          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+        >
+          <div className="mx-auto max-w-lg space-y-2">
+            {error && <p className="text-center text-sm text-rose">{error}</p>}
+            <ReactionBar code={room.code} name={me.name} />
+            {gameEnd && onShowResult ? (
+              <button
+                onClick={onShowResult}
+                className="gold-foil w-full rounded-2xl py-4 font-display text-[21px] font-extrabold tracking-wide text-[#3a2a06] shadow-[0_10px_30px_-12px_rgba(242,193,78,.8)] transition active:scale-[.98]"
+              >
+                最終結果を見る
+              </button>
+            ) : (
+              myTurn && <Controls busy={busy} onHit={() => void run('hit')} onStay={() => void run('stay')} />
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <FlyingCards flights={flights} start={startFlight} />
 
@@ -128,7 +160,7 @@ export default function Table({ room, players, me, isHost }: ScreenProps) {
           onChoose={(seat) => void run('choose_target', { targetSeat: seat })}
         />
       )}
-      {state.phase === 'round_end' && (
+      {roundEnd && (
         <RoundEndOverlay
           state={state}
           nameOf={nameOf}
@@ -136,6 +168,8 @@ export default function Table({ room, players, me, isHost }: ScreenProps) {
           seated={mySeat !== null}
           busy={busy}
           updatedAt={room.updated_at}
+          open={sheetOpen}
+          onToggle={() => setSheetOpen((v) => !v)}
           onNext={() => void run('next_round')}
         />
       )}
