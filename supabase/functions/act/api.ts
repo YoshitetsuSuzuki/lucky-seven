@@ -78,10 +78,10 @@ function db(): SupabaseClient {
   });
 }
 
-function genCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const bytes = crypto.getRandomValues(new Uint8Array(6));
-  return Array.from(bytes, (b) => chars[b % chars.length]).join('');
+/** 6桁の数字ルームコードを生成する（既存の英数字コードは loadRoom 側の大文字化で引き続き動作する） */
+export function genCode(): string {
+  const digits = crypto.getRandomValues(new Uint32Array(6));
+  return Array.from(digits, (d) => String(d % 10)).join('');
 }
 
 function genToken(): string {

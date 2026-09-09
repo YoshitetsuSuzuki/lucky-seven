@@ -1,5 +1,17 @@
 import { assertEquals } from 'jsr:@std/assert';
-import { cleanName, freeSeatOrNull, validateSettings } from './api.ts';
+import { cleanName, freeSeatOrNull, genCode, validateSettings } from './api.ts';
+
+// ---------- genCode ----------
+
+Deno.test('genCode: 6桁の数字を返す', () => {
+  const code = genCode();
+  assertEquals(/^\d{6}$/.test(code), true);
+});
+
+Deno.test('genCode: 50回呼んでも40種類以上のばらつきがある', () => {
+  const codes = new Set(Array.from({ length: 50 }, () => genCode()));
+  assertEquals(codes.size >= 40, true);
+});
 
 // ---------- freeSeatOrNull ----------
 
