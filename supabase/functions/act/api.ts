@@ -122,10 +122,22 @@ export function requireHost(room: RoomRow, me: PlayerRow) {
   if (room.host_player_id !== me.id) throw new ApiError('ホストのみ操作できます');
 }
 
-export function nextFreeSeat(players: PlayerRow[]): number {
+/** 空いている座席。満員なら null（＝観戦） */
+export function freeSeatOrNull(players: PlayerRow[]): number | null {
   const seated = players.filter((p) => p.seat !== null);
-  if (seated.length >= MAX_PLAYERS) throw new ApiError('満員です（12人まで）');
+  if (seated.length >= MAX_PLAYERS) return null;
   return seated.length === 0 ? 0 : Math.max(...seated.map((p) => p.seat!)) + 1;
+}
+
+export function nextFreeSeat(players: PlayerRow[]): number {
+  const seat = freeSeatOrNull(players);
+  if (seat === null) throw new ApiError('満員です（12人まで）');
+  return seat;
+}
+
+/** 座席の一意制約（players_room_seat_uniq）に当たったか */
+function isSeatConflict(e: unknown): boolean {
+  return typeof e === 'object' && e !== null && (e as { code?: string }).code === '23505';
 }
 
 async function insertPlayer(
@@ -161,8 +173,10 @@ async function create(sb: SupabaseClient, payload: Record<string, unknown> | und
   }
   if (!room) throw new ApiError('ルームを作成できませんでした');
   const { playerId, token } = await insertPlayer(sb, room.id, name, 0, false);
-  await sb.from('rooms').update({ host_player_id: playerId }).eq('id', room.id);
-  await sb.from('room_secrets').insert({ room_id: room.id });
+  const { error: eHost } = await sb.from('rooms').update({ host_player_id: playerId }).eq('id', room.id);
+  if (eHost) throw eHost;
+  const { error: eSecrets } = await sb.from('room_secrets').insert({ room_id: room.id });
+  if (eSecrets) throw eSecrets;
   return { code: room.code, playerId, token, seat: 0 };
 }
 
@@ -173,10 +187,19 @@ async function join(sb: SupabaseClient, req: ActRequest) {
     return { code: room.code, playerId: me.id, token: req.token, seat: me.seat };
   }
   const name = cleanName(req.payload?.name);
-  const players = await loadPlayers(sb, room.id);
-  const seat = room.status === 'lobby' ? nextFreeSeat(players) : null;
-  const { playerId, token } = await insertPlayer(sb, room.id, name, seat, false);
-  return { code: room.code, playerId, token, seat };
+  // 座席の一意制約に当たったら、players を読み直して座席を取り直す
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const players = await loadPlayers(sb, room.id);
+    // ロビーでも満員なら観戦者（seat null）として登録する
+    const seat = room.status === 'lobby' ? freeSeatOrNull(players) : null;
+    try {
+      const { playerId, token } = await insertPlayer(sb, room.id, name, seat, false);
+      return { code: room.code, playerId, token, seat };
+    } catch (e) {
+      if (!isSeatConflict(e)) throw e;
+    }
+  }
+  throw new ApiError('混み合っています。もう一度お試しください');
 }
 
 // ---------- dispatcher ----------
@@ -223,17 +246,28 @@ function validateSettings(raw: unknown): Settings {
   return { turnSeconds, endMode, target };
 }
 
-async function saveNewGame(sb: SupabaseClient, room: RoomRow, state: PublicState, deck: Card[]) {
-  const { data, error } = await sb
-    .from('rooms')
-    .update({ state, status: 'playing', version: room.version + 1, updated_at: new Date().toISOString() })
-    .eq('id', room.id)
-    .eq('version', room.version)
-    .select('id');
+/** rooms.state と room_secrets.deck を1トランザクションで更新する（version の compare-and-set 付き） */
+async function commitRoom(
+  sb: SupabaseClient,
+  room: RoomRow,
+  state: PublicState,
+  status: string,
+  deck: Card[],
+): Promise<boolean> {
+  const { data, error } = await sb.rpc('commit_room', {
+    p_id: room.id,
+    p_version: room.version,
+    p_state: state,
+    p_status: status,
+    p_deck: deck,
+  });
   if (error) throw error;
-  if (!data || data.length === 0) throw new ApiError('他の操作と重なりました。もう一度お試しください');
-  const { error: e2 } = await sb.from('room_secrets').update({ deck }).eq('room_id', room.id);
-  if (e2) throw e2;
+  return data === true;
+}
+
+async function saveNewGame(sb: SupabaseClient, room: RoomRow, state: PublicState, deck: Card[]) {
+  const ok = await commitRoom(sb, room, state, 'playing', deck);
+  if (!ok) throw new ApiError('他の操作と重なりました。もう一度お試しください');
 }
 
 function luckySeats(secrets: SecretsRow, players: PlayerRow[]): number[] {
@@ -251,8 +285,8 @@ async function launch(sb: SupabaseClient, room: RoomRow, players: PlayerRow[]) {
     room.settings,
     randomRng(),
     Date.now(),
+    luckySeats(secretsRow, players),
   );
-  secrets.luckySeats = luckySeats(secretsRow, players);
   await saveNewGame(sb, room, state, secrets.deck);
   return {};
 }
@@ -260,12 +294,20 @@ async function launch(sb: SupabaseClient, room: RoomRow, players: PlayerRow[]) {
 async function addCpu(sb: SupabaseClient, room: RoomRow, me: PlayerRow) {
   requireHost(room, me);
   if (room.status !== 'lobby') throw new ApiError('ロビーでのみ追加できます');
-  const players = await loadPlayers(sb, room.id);
-  const seat = nextFreeSeat(players);
-  const cpuCount = players.filter((p) => p.is_cpu).length;
-  const name = CPU_NAMES[cpuCount % CPU_NAMES.length];
-  await insertPlayer(sb, room.id, name, seat, true);
-  return {};
+  // 座席の一意制約に当たったら、players を読み直して座席を取り直す
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const players = await loadPlayers(sb, room.id);
+    const seat = nextFreeSeat(players);
+    const cpuCount = players.filter((p) => p.is_cpu).length;
+    const name = CPU_NAMES[cpuCount % CPU_NAMES.length];
+    try {
+      await insertPlayer(sb, room.id, name, seat, true);
+      return {};
+    } catch (e) {
+      if (!isSeatConflict(e)) throw e;
+    }
+  }
+  throw new ApiError('混み合っています。もう一度お試しください');
 }
 
 async function removeCpu(sb: SupabaseClient, room: RoomRow, me: PlayerRow, playerId: string) {
@@ -309,31 +351,17 @@ async function nextGame(sb: SupabaseClient, room: RoomRow, me: PlayerRow) {
 }
 
 async function toggleLucky(sb: SupabaseClient, room: RoomRow, me: PlayerRow) {
-  const secrets = await loadSecrets(sb, room.id);
-  const ids = new Set(secrets.lucky_player_ids);
-  const lucky = !ids.has(me.id);
-  if (lucky) ids.add(me.id);
-  else ids.delete(me.id);
-  const { error } = await sb.from('room_secrets').update({ lucky_player_ids: [...ids] }).eq('room_id', room.id);
+  // 読み取り→書き込みを1文にまとめ、同時操作で取りこぼさないようにする
+  const { data, error } = await sb.rpc('toggle_lucky', { p_room_id: room.id, p_player_id: me.id });
   if (error) throw error;
-  return { lucky };
+  return { lucky: data === true };
 }
 
 // ---------- game ----------
 
 async function saveGame(sb: SupabaseClient, room: RoomRow, state: PublicState, deck: Card[]): Promise<boolean> {
   const status = state.phase === 'game_end' ? 'finished' : 'playing';
-  const { data, error } = await sb
-    .from('rooms')
-    .update({ state, status, version: room.version + 1, updated_at: new Date().toISOString() })
-    .eq('id', room.id)
-    .eq('version', room.version)
-    .select('id');
-  if (error) throw error;
-  if (!data || data.length === 0) return false;
-  const { error: e2 } = await sb.from('room_secrets').update({ deck }).eq('room_id', room.id);
-  if (e2) throw e2;
-  return true;
+  return commitRoom(sb, room, state, status, deck);
 }
 
 function buildAction(
@@ -377,7 +405,11 @@ async function gameAction(
 ) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const room = await loadRoom(sb, code);
-    if (room.status !== 'playing' || !room.state) throw new ApiError('ゲーム中ではありません');
+    if (room.status !== 'playing' || !room.state) {
+      // 終了後に届いた tick は無視する（クライアントのタイマーが遅れて届くことがある）
+      if (action === 'tick') return { noop: true };
+      throw new ApiError('ゲーム中ではありません');
+    }
     const players = await loadPlayers(sb, room.id);
     const secretsRow = await loadSecrets(sb, room.id);
     const secrets: Secrets = { deck: secretsRow.deck, luckySeats: luckySeats(secretsRow, players) };
