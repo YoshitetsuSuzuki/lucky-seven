@@ -160,6 +160,7 @@ export default function Table({
         <TargetModal
           pending={state.pending}
           candidates={targetCandidates(state)}
+          players={state.players}
           nameOf={nameOf}
           mySeat={mySeat}
           busy={busy}
