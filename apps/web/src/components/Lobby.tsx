@@ -17,7 +17,7 @@ function Chip({ active, disabled, onClick, children }: { active: boolean; disabl
     <button
       disabled={disabled}
       onClick={onClick}
-      className={`rounded-full px-4 py-2 text-sm font-bold transition ${active ? 'bg-amber-400 text-slate-900' : 'bg-slate-800 text-slate-300'} disabled:cursor-default`}
+      className={`rounded-full px-4 py-2 text-sm font-bold transition ${active ? 'bg-amber-400 text-slate-900' : 'bg-slate-800 text-slate-300'} disabled:opacity-40 disabled:cursor-default`}
     >
       {children}
     </button>

@@ -10,7 +10,7 @@ export default function ReactionBar({ code, name }: { code: string; name: string
   const seq = useRef(0);
 
   useEffect(() => {
-    const ch = supabase.channel(`reactions:${code}`);
+    const ch = supabase.channel(`room:${code}:reactions`, { config: { broadcast: { self: true } } });
     ch.on('broadcast', { event: 'reaction' }, ({ payload }) => {
       const item: Floating = { id: seq.current++, emoji: payload.emoji, name: payload.name, x: 10 + Math.random() * 70 };
       setFloating((f) => [...f, item]);

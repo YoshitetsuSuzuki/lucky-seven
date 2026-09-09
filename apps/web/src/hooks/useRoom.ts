@@ -41,10 +41,11 @@ export function useRoom(code: string) {
       setLoading(false);
       return null;
     }
-    setRoom(data as RoomRow);
-    await fetchPlayers(data.id);
+    const next = data as RoomRow;
+    setRoom((prev) => (prev && prev.version > next.version ? prev : next));
+    await fetchPlayers(next.id);
     setLoading(false);
-    return data as RoomRow;
+    return next;
   }, [code, fetchPlayers]);
 
   useEffect(() => {

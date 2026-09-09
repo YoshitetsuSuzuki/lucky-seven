@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { targetCandidates, waitingOn } from '@lucky7/engine';
 import type { ScreenProps } from './Lobby';
 import { act } from '../lib/api';
+import { loadLucky, saveLucky } from '../lib/session';
 import { useTicker } from '../hooks/useTicker';
 import { useLongPress } from '../hooks/useLongPress';
 import PlayerRow from './PlayerRow';
@@ -16,11 +17,13 @@ export default function Table({ room, players, me, isHost }: ScreenProps) {
   const state = room.state!;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lucky, setLucky] = useState(false);
+  const [lucky, setLucky] = useState(() => loadLucky(room.code, me.id));
   const luckyPress = useLongPress(async () => {
     try {
       const r = await act('toggle_lucky', { code: room.code });
-      setLucky(Boolean(r.lucky));
+      const on = Boolean(r.lucky);
+      setLucky(on);
+      saveLucky(room.code, me.id, on);
     } catch { /* 静かに無視 */ }
   });
   const mySeat = me.seat;
@@ -49,7 +52,7 @@ export default function Table({ room, players, me, isHost }: ScreenProps) {
   const ordered = [...state.players].sort((a, b) => (a.seat === mySeat ? -1 : b.seat === mySeat ? 1 : a.seat - b.seat));
 
   return (
-    <div className="min-h-full max-w-lg mx-auto p-3 pb-32 space-y-2">
+    <div className="min-h-full max-w-lg mx-auto p-3 pb-44 space-y-2">
       <header className="flex items-center gap-3 px-1 py-2">
         <h1 className="text-xl font-black">ラッキー<span className={lucky ? 'text-amber-300' : 'text-amber-400/90'}>7</span></h1>
         <span className="text-sm text-slate-400">R{state.round} ・ 山札 {state.deckCount}</span>
@@ -75,7 +78,10 @@ export default function Table({ room, players, me, isHost }: ScreenProps) {
 
       {mySeat === null && <p className="text-center text-slate-400 text-sm py-2">観戦中（次のゲームから参加できます）</p>}
 
-      <div className="fixed bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent">
+      <div
+        className="fixed bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent"
+        style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+      >
         <div className="max-w-lg mx-auto space-y-2">
           {error && <p className="text-rose-400 text-sm text-center">{error}</p>}
           <ReactionBar code={room.code} name={me.name} />

@@ -20,7 +20,7 @@ export default function EventToast({ events, version, nameOf }: { events: GameEv
   const [msgs, setMsgs] = useState<string[]>([]);
   useEffect(() => {
     const m = events.map((e) => describeEvent(e, nameOf)).filter((x): x is string => !!x);
-    if (m.length === 0) return;
+    if (m.length === 0) { setMsgs([]); return; }
     setMsgs(m);
     const id = setTimeout(() => setMsgs([]), 2500);
     return () => clearTimeout(id);

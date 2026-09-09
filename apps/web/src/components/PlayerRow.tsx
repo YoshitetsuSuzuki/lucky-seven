@@ -1,4 +1,5 @@
 import type { PlayerState } from '@lucky7/engine';
+import type { LongPressHandlers } from '../hooks/useLongPress';
 import { currentScore } from '@lucky7/engine';
 import CardView from './CardView';
 
@@ -13,7 +14,7 @@ export default function PlayerRow({
 }: {
   player: PlayerState; name: string; isMe: boolean; isTurn: boolean; isChoosing: boolean;
   lastCardId: string | null; shake: boolean;
-  onNamePress?: { onPointerDown: () => void; onPointerUp: () => void; onPointerLeave: () => void };
+  onNamePress?: LongPressHandlers;
 }) {
   const st = STATUS[player.status];
   const score = player.status === 'active' ? currentScore(player) : player.roundScore;
