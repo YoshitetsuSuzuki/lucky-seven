@@ -234,6 +234,12 @@ function resolveQueued(s: PublicState, item: { seat: number; card: Card }) {
     return;
   }
   if (card.action === 'insurance') {
+    // 三連中に保険を使い切っていれば、2枚目は自分で保持する
+    if (!p.hasInsurance) {
+      p.hasInsurance = true;
+      s.discard.push(card);
+      return;
+    }
     const eligible = s.players.filter((o) => o.status === 'active' && o.seat !== p.seat && !o.hasInsurance);
     if (eligible.length === 0) {
       s.discard.push(card);
