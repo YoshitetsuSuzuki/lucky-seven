@@ -38,7 +38,7 @@ alter table public.players enable row level security;
 alter table public.player_tokens enable row level security;
 alter table public.room_secrets enable row level security;
 
--- 身内向けの非公開ゲームのため、rooms は全行 select 可のままとする（ルームコードは推測困難、書き込みは Edge Function のみ）
+-- anon キーを持つ者は全ルームのコード・状態・参加者名を列挙できる。身内用アプリとして許容（公開する場合は Broadcast＋private topic へ移行すること）
 create policy "rooms readable" on public.rooms for select to anon, authenticated using (true);
 create policy "players readable" on public.players for select to anon, authenticated using (true);
 -- player_tokens / room_secrets にはポリシーを作らない（service role のみ）
@@ -55,6 +55,7 @@ begin
    where id = p_id and version = p_version;
   if not found then return false; end if;
   update public.room_secrets set deck = p_deck where room_id = p_id;
+  if not found then raise exception 'room_secrets missing for %', p_id; end if;
   return true;
 end $$;
 revoke execute on function public.commit_room(uuid, integer, jsonb, text, jsonb) from public, anon, authenticated;
@@ -80,6 +81,7 @@ revoke execute on function public.toggle_lucky(uuid, text) from public, anon, au
 grant execute on function public.toggle_lucky(uuid, text) to service_role;
 
 -- 24時間以上前のルームを削除する関数（cron は任意）
+-- service_role への grant はあえて付けない。cron ジョブは関数オーナー権限で実行されるため不要。
 create or replace function public.cleanup_old_rooms() returns void language sql security definer set search_path = '' as $$
   delete from public.rooms where created_at < now() - interval '24 hours';
 $$;

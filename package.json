@@ -9,7 +9,8 @@
     "test": "npm run test -w @lucky7/engine",
     "dev": "npm run dev -w @lucky7/web",
     "build": "npm run build -w @lucky7/web",
-    "sync-engine": "bash scripts/sync-engine.sh"
+    "sync-engine": "bash scripts/sync-engine.sh",
+    "deploy:act": "npm run sync-engine && npx supabase functions deploy act --no-verify-jwt"
   },
   "devDependencies": {
     "deno": "^2.9.6"

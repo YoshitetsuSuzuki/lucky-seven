@@ -11,7 +11,7 @@
 1. Supabase でプロジェクトを作成し、`Project URL` と `anon key` を控える
 2. `npx supabase login` → `npx supabase link --project-ref <ref>`
 3. `npx supabase db push` でテーブルを作成
-4. `npm run sync-engine && npx supabase functions deploy act --no-verify-jwt`
+4. `npm run deploy:act`
 5. `apps/web/.env.local` に `VITE_SUPABASE_URL` と `VITE_SUPABASE_ANON_KEY` を書く
 6. `npm install && npm run dev`
 
