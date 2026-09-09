@@ -1,7 +1,7 @@
 /**
  * Web Audio API で合成する BGM と効果音。音声ファイルは一切持たない。
  * 将来 mp3 に差し替える場合も、外から見える窓口は
- * unlock / startBgm / stopBgm / playSfx / setSoundOn だけに閉じてある。
+ * unlock / startBgm / stopBgm / playSfx と ON/OFF の出し入れだけに閉じてある。
  */
 
 export type SfxName =
@@ -16,7 +16,12 @@ export type SfxName =
   | 'reaction'
   | 'win';
 
-const STORAGE_KEY = 'lucky7:sound';
+const BGM_KEY = 'lucky7:sound:bgm';
+const SFX_KEY = 'lucky7:sound:sfx';
+/** 旧: BGM と効果音がひとつだった頃の設定 */
+const LEGACY_KEY = 'lucky7:sound';
+/** 卓で BGM を鳴らすか（既定は鳴らさない。タブを閉じるまで有効） */
+const TABLE_KEY = 'lucky7:bgm:table';
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -24,21 +29,56 @@ let bgmBus: GainNode | null = null;
 let sfxBus: GainNode | null = null;
 let noiseBuf: AudioBuffer | null = null;
 
-let enabled = loadEnabled();
-let bgmWanted = false;
 let timer: number | null = null;
 let step = 0;
 let nextTime = 0;
+let bgmWanted = false;
 
 const listeners = new Set<() => void>();
 
-function loadEnabled(): boolean {
+/* ---------------- 設定の読み書き ---------------- */
+
+function readFlag(key: string, fallback: boolean): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEY) !== '0';
+    const v = localStorage.getItem(key);
+    if (v === null) return fallback;
+    return v !== '0';
   } catch {
-    return true;
+    return fallback;
   }
 }
+
+function writeFlag(key: string, on: boolean) {
+  try {
+    localStorage.setItem(key, on ? '1' : '0');
+  } catch {
+    /* ignore */
+  }
+}
+
+/** 旧キーがあれば新しい2つへ引き継ぐ */
+function migrate() {
+  try {
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if (legacy === null) return;
+    if (localStorage.getItem(BGM_KEY) === null) localStorage.setItem(BGM_KEY, legacy);
+    if (localStorage.getItem(SFX_KEY) === null) localStorage.setItem(SFX_KEY, legacy);
+    localStorage.removeItem(LEGACY_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+migrate();
+
+let bgmOn = readFlag(BGM_KEY, true);
+let sfxOn = readFlag(SFX_KEY, true);
+let tableBgm = (() => {
+  try {
+    return sessionStorage.getItem(TABLE_KEY) === '1';
+  } catch {
+    return false;
+  }
+})();
 
 function emit() {
   for (const fn of listeners) fn();
@@ -49,29 +89,44 @@ export function subscribeSound(fn: () => void): () => void {
   return () => listeners.delete(fn);
 }
 
-export function isSoundOn(): boolean {
-  return enabled;
+export function isBgmOn(): boolean {
+  return bgmOn;
+}
+export function isSfxOn(): boolean {
+  return sfxOn;
+}
+/** 卓（対局中・結果）で BGM を鳴らす設定。既定 OFF、セッション内のみ保持 */
+export function isTableBgmOn(): boolean {
+  return tableBgm;
 }
 
-export function setSoundOn(on: boolean) {
-  enabled = on;
+export function setBgmOn(on: boolean) {
+  bgmOn = on;
+  writeFlag(BGM_KEY, on);
+  if (!on) stopBgm();
+  emit();
+}
+
+export function setSfxOn(on: boolean) {
+  sfxOn = on;
+  writeFlag(SFX_KEY, on);
+  if (on) unlock();
+  emit();
+}
+
+export function setTableBgmOn(on: boolean) {
+  tableBgm = on;
   try {
-    localStorage.setItem(STORAGE_KEY, on ? '1' : '0');
+    sessionStorage.setItem(TABLE_KEY, on ? '1' : '0');
   } catch {
     /* ignore */
-  }
-  if (on) {
-    unlock();
-    if (bgmWanted) startScheduler();
-  } else {
-    stopScheduler();
   }
   emit();
 }
 
 /** ユーザー操作の中から呼ぶこと（自動再生制限の解除） */
 export function unlock() {
-  if (!enabled) return;
+  if (!sfxOn && !bgmOn) return;
   try {
     if (!ctx) {
       const Ctor: typeof AudioContext | undefined =
@@ -215,65 +270,70 @@ const SFX: Record<SfxName, (t: number) => void> = {
 };
 
 export function playSfx(name: SfxName) {
-  if (!enabled) return;
+  if (!sfxOn) return;
   unlock();
   if (!ctx || !sfxBus) return;
   if (ctx.state === 'suspended') void ctx.resume();
   SFX[name](ctx.currentTime + 0.01);
 }
 
-/* ---------------- BGM ---------------- */
+/* ---------------- BGM（明るいボードゲーム風のループ） ---------------- */
 
-const BPM = 92;
+const BPM = 118;
 const EIGHTH = 60 / BPM / 2;
 const STEPS = 64; // 8小節 × 8分音符8つ
 const LOOKAHEAD_S = 0.2;
 const TIMER_MS = 100;
+/** BGM バスの音量（控えめに） */
+const BGM_GAIN = 0.09;
+const FADE_IN_S = 0.6;
+const FADE_OUT_S = 0.15;
 
-/** F: I - vi - IV - V （2小節ずつ）。暖かい響きになる並び */
-const CHORDS: { root: number; notes: number[] }[] = [
-  { root: 41, notes: [65, 69, 72] }, // F  : F3 A3 C4
-  { root: 38, notes: [62, 65, 69] }, // Dm : D3 F3 A3
-  { root: 46, notes: [58, 62, 65] }, // Bb : Bb2 D3 F3
-  { root: 36, notes: [60, 64, 67] }, // C  : C3 E3 G3
+/** C: I - V - vi - IV（2小節ずつ）。明るく前向きな並び */
+const CHORDS: { bass: number; lead: number[] }[] = [
+  { bass: 48, lead: [72, 76, 79, 84] }, // C  : C3 / C5 E5 G5 C6
+  { bass: 43, lead: [71, 74, 79, 83] }, // G  : G2 / B4 D5 G5 B5
+  { bass: 45, lead: [69, 72, 76, 81] }, // Am : A2 / A4 C5 E5 A5
+  { bass: 41, lead: [69, 72, 77, 81] }, // F  : F2 / A4 C5 F5 A5
 ];
 
-function pad(at: number, chordIndex: number) {
-  if (!ctx || !bgmBus) return;
-  const dur = EIGHTH * 16;
-  const filter = ctx.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.value = 1200;
-  filter.Q.value = 0.6;
-  const g = ctx.createGain();
-  g.gain.setValueAtTime(0.0001, at);
-  g.gain.exponentialRampToValueAtTime(0.24, at + 0.5);
-  g.gain.setValueAtTime(0.24, at + dur * 0.62);
-  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
-  filter.connect(g).connect(bgmBus);
-  for (const n of CHORDS[chordIndex].notes) {
-    const o = ctx.createOscillator();
-    o.type = 'triangle';
-    o.frequency.value = midi(n);
-    o.detune.value = (Math.random() - 0.5) * 8;
-    o.connect(filter);
-    o.start(at);
-    o.stop(at + dur + 0.1);
-  }
+/** 2小節ぶんのメロディ（lead の添字、-1 は休符）。少し食う形でノリを出す */
+const MELODY: number[][] = [
+  [0, -1, 1, 2, -1, 2, 3, -1, 2, -1, 1, 0, -1, 1, -1, 2],
+  [3, -1, 2, 1, -1, 1, 0, -1, 1, 2, -1, 2, 3, -1, 2, -1],
+];
+
+/** マリンバ風の短い一撃 */
+function pluck(note: number, at: number, peak: number) {
+  tone(midi(note), at, 0.22, { type: 'triangle', peak, attack: 0.004, bus: bgmBus });
+  tone(midi(note + 12), at, 0.08, { type: 'sine', peak: peak * 0.35, attack: 0.003, bus: bgmBus });
+}
+
+/** 2拍4拍の軽い手拍子 */
+function clap(at: number) {
+  for (let i = 0; i < 3; i++) noise(at + i * 0.011, 0.075, { bp: 1650, q: 0.7, peak: 0.075 - i * 0.015, bus: bgmBus });
 }
 
 function scheduleStep(i: number, at: number) {
   if (!ctx || !bgmBus) return;
   const chordIndex = Math.floor(i / 16) % CHORDS.length;
-  if (i % 16 === 0) pad(at, chordIndex);
+  const chord = CHORDS[chordIndex];
+  const inBar = i % 8;
 
-  // ベース：小節頭と3拍目
-  if (i % 8 === 0 || i % 8 === 4) {
-    const root = CHORDS[chordIndex].root + (i % 8 === 4 ? 7 : 0);
-    tone(midi(root), at, 0.34, { type: 'sine', peak: 0.3, to: midi(root) * 0.985, bus: bgmBus });
-  }
-  // ハイハット：裏拍
-  if (i % 2 === 1) noise(at, 0.045, { hp: 8200, peak: i % 4 === 1 ? 0.055 : 0.035, bus: bgmBus });
+  // ベース：1拍目と3拍目（1拍目は根音、3拍目は5度）
+  if (inBar === 0) pluck(chord.bass, at, 0.34);
+  else if (inBar === 4) pluck(chord.bass + 7, at, 0.26);
+
+  // 手拍子：2拍目と4拍目
+  if (inBar === 2 || inBar === 6) clap(at);
+
+  // クローズドハイハット：裏拍
+  if (i % 2 === 1) noise(at, 0.03, { hp: 9000, peak: i % 4 === 1 ? 0.045 : 0.03, bus: bgmBus });
+
+  // メロディ：8分音符でコードトーンをなぞる
+  const pattern = MELODY[chordIndex % MELODY.length];
+  const idx = pattern[i % 16];
+  if (idx >= 0) pluck(chord.lead[idx], at, inBar === 0 || inBar === 4 ? 0.2 : 0.15);
 }
 
 function scheduler() {
@@ -286,7 +346,7 @@ function scheduler() {
 }
 
 function startScheduler() {
-  if (!enabled || !bgmWanted) return;
+  if (!bgmOn || !bgmWanted) return;
   unlock();
   if (!ctx || !bgmBus) return;
   if (ctx.state === 'suspended') void ctx.resume();
@@ -295,24 +355,27 @@ function startScheduler() {
   nextTime = ctx.currentTime + 0.12;
   bgmBus.gain.cancelScheduledValues(ctx.currentTime);
   bgmBus.gain.setValueAtTime(0.0001, ctx.currentTime);
-  bgmBus.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 1.2);
+  bgmBus.gain.exponentialRampToValueAtTime(BGM_GAIN, ctx.currentTime + FADE_IN_S);
   timer = window.setInterval(scheduler, TIMER_MS);
   scheduler();
 }
 
+/** 予約済みの音も 150ms で消える。止めるときは即座に */
 function stopScheduler() {
   if (timer !== null) {
     window.clearInterval(timer);
     timer = null;
   }
   if (ctx && bgmBus) {
-    bgmBus.gain.cancelScheduledValues(ctx.currentTime);
-    bgmBus.gain.setValueAtTime(Math.max(0.0001, bgmBus.gain.value), ctx.currentTime);
-    bgmBus.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+    const now = ctx.currentTime;
+    bgmBus.gain.cancelScheduledValues(now);
+    bgmBus.gain.setValueAtTime(Math.max(0.0001, bgmBus.gain.value), now);
+    bgmBus.gain.linearRampToValueAtTime(0, now + FADE_OUT_S);
   }
 }
 
 export function startBgm() {
+  if (!bgmOn) return;
   bgmWanted = true;
   startScheduler();
 }

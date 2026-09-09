@@ -5,7 +5,7 @@ import { useAct } from '../hooks/useAct';
 import { useNameOf } from '../hooks/useNameOf';
 import { useLuckyToggle } from '../hooks/useLuckyToggle';
 import { useTicker } from '../hooks/useTicker';
-import { useBgm, useSound } from '../hooks/useSound';
+import { useBgm, useSound, useTableBgm } from '../hooks/useSound';
 import { useCardFlights } from '../hooks/useCardFlights';
 import { describeEvent, rowEffects } from '../lib/events';
 import PlayerRow from './PlayerRow';
@@ -14,7 +14,7 @@ import Timer from './Timer';
 import TargetModal from './TargetModal';
 import RoundEndOverlay from './RoundEndOverlay';
 import ReactionBar from './ReactionBar';
-import SoundToggle from './SoundToggle';
+import SoundControls from './SoundControls';
 import TablePanel from './TablePanel';
 import FlyingCards from './FlyingCards';
 
@@ -44,7 +44,8 @@ export default function Table({
   useEffect(() => { setSheetOpen(true); }, [round]);
 
   useTicker(room.code, state, room.status === 'playing');
-  useBgm();
+  // 卓では BGM を自動で鳴らさない（ボタンで ON にしたときだけ）
+  useBgm(useTableBgm());
   useSound(state, room.version);
   const { flights, hiddenIds, startFlight } = useCardFlights({
     version: room.version,
@@ -73,7 +74,8 @@ export default function Table({
   return (
     <div className={`mx-auto min-h-full max-w-lg px-3 ${bottomPad}`}>
       <div className="sticky top-0 z-20 -mx-3 bg-gradient-to-b from-ink via-ink/94 to-transparent px-3 pb-3 pt-1">
-        <header className="flex items-center gap-2.5 px-0.5 pb-1.5">
+        {/* 狭い画面では音のボタンが2行目に回り込む（文字を削らないため） */}
+        <header className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 px-0.5 pb-1.5">
           <h1 className="font-display text-[19px] font-extrabold tracking-tight">
             ラッキー
             <span
@@ -92,7 +94,7 @@ export default function Table({
             {waiting ? (waiting.seat === mySeat ? 'あなたの番' : `${nameOf(waiting.seat)} の番`) : ''}
           </span>
           <Timer deadline={state.deadline} total={state.settings.turnSeconds} />
-          <SoundToggle />
+          <SoundControls scope="table" className="ml-auto" />
         </header>
 
         <TablePanel

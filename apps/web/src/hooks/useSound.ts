@@ -1,24 +1,50 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import type { PublicState } from '@lucky7/engine';
-import { handleVisibility, isSoundOn, playSfx, startBgm, stopBgm, subscribeSound } from '../lib/audio';
+import {
+  handleVisibility,
+  isBgmOn,
+  isSfxOn,
+  isTableBgmOn,
+  playSfx,
+  startBgm,
+  stopBgm,
+  subscribeSound,
+} from '../lib/audio';
 import type { SfxName } from '../lib/audio';
 
-/** サウンド ON/OFF を React に橋渡しする */
-export function useSoundEnabled(): boolean {
-  return useSyncExternalStore(subscribeSound, isSoundOn, () => true);
+/** BGM の ON/OFF を React に橋渡しする */
+export function useBgmEnabled(): boolean {
+  return useSyncExternalStore(subscribeSound, isBgmOn, () => true);
 }
 
-/** この画面にいる間だけ BGM を鳴らす */
+/** 効果音の ON/OFF を React に橋渡しする */
+export function useSfxEnabled(): boolean {
+  return useSyncExternalStore(subscribeSound, isSfxOn, () => true);
+}
+
+/** 卓で BGM を鳴らす設定（既定 OFF） */
+export function useTableBgm(): boolean {
+  return useSyncExternalStore(subscribeSound, isTableBgmOn, () => false);
+}
+
+/**
+ * この画面にいる間だけ BGM を鳴らす。
+ * active=false（卓の既定）なら鳴らさず、ボタンで ON にした瞬間に鳴り始める。
+ */
 export function useBgm(active = true) {
+  const on = useBgmEnabled();
   useEffect(() => {
-    if (!active) return;
+    if (!active || !on) {
+      stopBgm();
+      return;
+    }
     startBgm();
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
       stopBgm();
     };
-  }, [active]);
+  }, [active, on]);
 }
 
 const EVENT_SFX: Record<string, SfxName> = {

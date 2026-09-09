@@ -5,7 +5,7 @@ import type { ScreenProps } from '../hooks/useRoom';
 import { useAct } from '../hooks/useAct';
 import { useBgm } from '../hooks/useSound';
 import { formatCode } from '../lib/code';
-import SoundToggle from './SoundToggle';
+import SoundControls from './SoundControls';
 import { CardBack } from './CardView';
 
 const TURN_OPTIONS: { label: string; value: Settings['turnSeconds'] }[] = [
@@ -62,7 +62,7 @@ export default function Lobby({ room, players, me, isHost }: ScreenProps) {
         <h1 className="font-display text-2xl font-extrabold tracking-tight">
           ラッキー<span className="text-gold">7</span>
         </h1>
-        <SoundToggle className="ml-auto" />
+        <SoundControls className="ml-auto" />
       </header>
 
       <section className="felt flex items-center gap-4 rounded-3xl p-4">

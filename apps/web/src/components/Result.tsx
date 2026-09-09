@@ -3,9 +3,10 @@ import type { ScreenProps } from '../hooks/useRoom';
 import { useAct } from '../hooks/useAct';
 import { useNameOf } from '../hooks/useNameOf';
 import { useElapsed } from '../hooks/useElapsed';
+import { useBgm, useTableBgm } from '../hooks/useSound';
 import { playSfx } from '../lib/audio';
 import { STALE_MS } from '../lib/stale';
-import SoundToggle from './SoundToggle';
+import SoundControls from './SoundControls';
 
 export default function Result({
   room,
@@ -20,6 +21,8 @@ export default function Result({
   const { busy, error, run } = useAct(room.code);
   const nameOf = useNameOf(players);
   const elapsed = useElapsed(room.updated_at);
+  // 卓と同じ扱い（ボタンで ON にしたときだけ鳴らす）
+  useBgm(useTableBgm());
   const state = room.state;
   const winners = new Set(state?.winnerSeats ?? []);
   const iWon = me.seat !== null && winners.has(me.seat);
@@ -39,7 +42,7 @@ export default function Result({
   return (
     <div className="mx-auto flex min-h-full max-w-lg flex-col gap-6 p-5">
       <header className="flex items-center justify-end">
-        <SoundToggle />
+        <SoundControls scope="table" />
       </header>
 
       <div className="text-center">

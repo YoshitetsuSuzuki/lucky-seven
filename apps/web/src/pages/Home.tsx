@@ -5,7 +5,7 @@ import { unlock } from '../lib/audio';
 import { normalizeCode } from '../lib/code';
 import { loadName, saveName, saveSession } from '../lib/session';
 import { CardBack } from '../components/CardView';
-import SoundToggle from '../components/SoundToggle';
+import SoundControls from '../components/SoundControls';
 
 export default function Home() {
   const nav = useNavigate();
@@ -46,7 +46,7 @@ export default function Home() {
   return (
     <div className="relative mx-auto flex min-h-full max-w-lg flex-col justify-center gap-9 p-6">
       <div className="absolute right-5 top-5">
-        <SoundToggle />
+        <SoundControls />
       </div>
 
       <div className="flex flex-col items-center gap-4">

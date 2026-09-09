@@ -3,7 +3,7 @@ import { act } from '../lib/api';
 import { unlock } from '../lib/audio';
 import { formatCode } from '../lib/code';
 import { loadName, saveName, saveSession } from '../lib/session';
-import SoundToggle from './SoundToggle';
+import SoundControls from './SoundControls';
 import { CardBack } from './CardView';
 
 export default function JoinForm({ code, onJoined }: { code: string; onJoined: () => void }) {
@@ -33,7 +33,7 @@ export default function JoinForm({ code, onJoined }: { code: string; onJoined: (
   return (
     <div className="relative mx-auto flex min-h-full max-w-lg flex-col justify-center gap-7 p-6">
       <div className="absolute right-5 top-5">
-        <SoundToggle />
+        <SoundControls />
       </div>
 
       <div className="felt flex items-center gap-4 rounded-3xl p-4">
