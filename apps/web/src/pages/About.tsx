@@ -182,7 +182,7 @@ export default function About() {
             このゲームはオリジナル作品です。他社のカードゲーム製品とは関係ありません。
           </p>
           <p className="text-[12.5px] text-cream/55">
-            運営: 株式会社インフィニティ（インフィニティゲームズは株式会社インフィニティのゲームブランドです）
+            運営: 株式会社インフィニティ
           </p>
           <p className="text-[12.5px] text-cream/55">© 2026 Infinity Inc. / インフィニティゲームズ</p>
         </Section>

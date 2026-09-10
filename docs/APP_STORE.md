@@ -63,7 +63,7 @@
 
 （日本語表記が必要な欄がある場合は「© 2026 インフィニティゲームズ」）
 
-> **注記**: 運営者（法的主体）は株式会社インフィニティ（代表取締役 鈴木嘉哲、インフィニティゲームズはそのゲームブランド）だが、App Store Connect 上の「販売者（Seller）」表示は Apple Developer Program のアカウント種別に紐づくため、個人アカウント（Team `2ZS2R958MK` / Yoshitetsu Suzuki）のままである限り当面「鈴木嘉哲」と表示される。
+> **注記**: 運営者（法的主体）は株式会社インフィニティ（代表取締役 鈴木嘉哲）だが、App Store Connect 上の「販売者（Seller）」表示は Apple Developer Program のアカウント種別に紐づくため、個人アカウント（Team `2ZS2R958MK` / Yoshitetsu Suzuki）のままである限り当面「鈴木嘉哲」と表示される。
 
 ### SKU 案
 
