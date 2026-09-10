@@ -181,7 +181,7 @@ export default function About() {
           <p className="rounded-2xl border border-edge/10 bg-edge/5 px-3 py-2 text-[12.5px] text-cream/70">
             このゲームはオリジナル作品です。他社のカードゲーム製品とは関係ありません。
           </p>
-          <p className="text-[12.5px] text-cream/55">開発: 鈴木 佳哲（個人開発者）</p>
+          <p className="text-[12.5px] text-cream/55">開発: 鈴木 嘉哲（個人開発者）</p>
         </Section>
       </div>
     </div>
